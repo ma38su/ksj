@@ -6,6 +6,8 @@ public class Station extends Data {
 	private String line;
 	private String company;
 	private String name;
+	private int railwayType;
+	private int instituteType;
 	private Data data;
 	
 	public String getLine() {
@@ -20,6 +22,14 @@ public class Station extends Data {
 		return this.name;
 	}
 	
+	public int getRailwayType() {
+		return this.railwayType;
+	}
+	
+	public int getInstitudeType() {
+		return this.instituteType;
+	}
+	
 	@Override
 	public void send(String tag, Object obj) {
 		if (obj instanceof String) {
@@ -30,6 +40,10 @@ public class Station extends Data {
 				this.company = string;
 			} else if (tag.equals("ksj:stn")) {
 				this.name = string;
+			} else if (tag.equals("ksj:int")) {
+				this.instituteType = Integer.parseInt(string);
+			} else if (tag.equals("ksj:rar")) {
+				this.railwayType = Integer.parseInt(string);
 			}
 		} else if (obj instanceof RailroadSection) {
 			RailroadSection section = (RailroadSection) obj;
