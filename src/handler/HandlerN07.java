@@ -7,18 +7,16 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+import model.BusRoute;
 import model.Curve;
 import model.Data;
-import model.RailroadSection;
-import model.Station;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class HandlerN02 extends DefaultHandler {
+public class HandlerN07 extends DefaultHandler {
 
 	private static final String HEADER = "XMLDocument";
 	
@@ -34,9 +32,9 @@ public class HandlerN02 extends DefaultHandler {
 
 	private StringBuilder buf;
 
-	private Set<String> charactersTarget;
+	private HashSet<String> charactersTarget;
 
-	public HandlerN02() throws ClassNotFoundException {
+	public HandlerN07() throws ClassNotFoundException {
 
 		this.list = new LinkedList<String>();
 
@@ -44,16 +42,17 @@ public class HandlerN02 extends DefaultHandler {
 		
 		this.classMap = new HashMap<String, Class<?>>();
 		this.classMap.put("gml:Curve", Curve.class);
-		this.classMap.put("ksj:RailroadSection", RailroadSection.class);
-		this.classMap.put("ksj:Station", Station.class);
-
+		this.classMap.put("ksj:BusRoute", BusRoute.class);
+		
 		this.charactersTarget = new HashSet<String>();
 		this.charactersTarget.add("gml:posList");
-		this.charactersTarget.add("ksj:opc");
-		this.charactersTarget.add("ksj:lin");
-		this.charactersTarget.add("ksj:stn");
-		this.charactersTarget.add("ksj:int");
-		this.charactersTarget.add("ksj:rar");
+		this.charactersTarget.add("ksj:bsc");
+		this.charactersTarget.add("ksj:bln");
+		this.charactersTarget.add("ksj:boc");
+		this.charactersTarget.add("ksj:rpd");
+		this.charactersTarget.add("ksj:rps");
+		this.charactersTarget.add("ksj:rph");
+
 		this.buf = new StringBuilder();
 	}
 	
@@ -84,6 +83,8 @@ public class HandlerN02 extends DefaultHandler {
 				this.data.send(tag, points.toArray(new Point[]{}));
 			} else if (this.data != null) {
 				this.data.send(tag, this.buf.toString());
+			} else {
+				System.out.println("buf: "+ this.buf.toString());
 			}
 			this.buf.setLength(0);
 		}
@@ -202,7 +203,7 @@ public class HandlerN02 extends DefaultHandler {
 		
 		if (this.list.size() > 1) {
 			if (this.classMap.containsKey(this.list.getFirst())) {
-				if (qName.equals("ksj:loc") || qName.equals("ksj:srs")) {
+				if (qName.equals("ksj:brt")) {
 					String href = attr.getValue("xlink:href");
 					assert("#".equals(href.substring(0, 1)));
 					Data data = this.dataMap.get(href.substring(1));

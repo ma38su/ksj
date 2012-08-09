@@ -21,14 +21,15 @@ public class RailroadSection extends Data {
 	@Override
 	public void send(String tag, Object obj) {
 		if (obj instanceof Curve) {
-			if (tag.equals("ksj:loc")) {
+			if ("ksj:loc".equals(tag)) {
 				this.curve = (Curve) obj;
 			}
 		} else if (obj instanceof String) {
 			String string = (String) obj;
-			if (tag.equals("ksj:lin")) {
+			System.out.println(tag + ": "+ string);
+			if ("ksj:lin".equals(tag)) {
 				this.line = string;
-			} else if (tag.equals("ksj:opc")) {
+			} else if ("ksj:opc".equals(tag)) {
 				this.company = string;
 			}
 		}

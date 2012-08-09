@@ -34,15 +34,15 @@ public class Station extends Data {
 	public void send(String tag, Object obj) {
 		if (obj instanceof String) {
 			String string = (String) obj;
-			if (tag.equals("ksj:lin")) {
+			if ("ksj:lin".equals(tag)) {
 				this.line = string;
-			} else if (tag.equals("ksj:opc")) {
+			} else if ("ksj:opc".equals(tag)) {
 				this.company = string;
-			} else if (tag.equals("ksj:stn")) {
+			} else if ("ksj:stn".equals(tag)) {
 				this.name = string;
-			} else if (tag.equals("ksj:int")) {
+			} else if ("ksj:int".equals(tag)) {
 				this.instituteType = Integer.parseInt(string);
-			} else if (tag.equals("ksj:rar")) {
+			} else if ("ksj:rar".equals(tag)) {
 				this.railwayType = Integer.parseInt(string);
 			}
 		} else if (obj instanceof RailroadSection) {
