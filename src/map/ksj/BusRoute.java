@@ -1,10 +1,12 @@
 package map.ksj;
 
+import java.io.Serializable;
+
 /**
  * バスルートのクラス
  * @author fujiwara
  */
-public class BusRoute implements Data {
+public class BusRoute implements Data, Serializable {
 
 	/**
 	 * 路線

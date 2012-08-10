@@ -1,14 +1,15 @@
 package map.ksj;
 
+import java.io.Serializable;
 
-public class Station implements Data {
+public class Station implements Data, Serializable {
 
 	private String line;
 	private String company;
 	private String name;
 	private int railwayType;
 	private int instituteType;
-	private Data data;
+	private GmlCurve curve;
 	
 	public String getLine() {
 		return this.line;
@@ -47,24 +48,19 @@ public class Station implements Data {
 			}
 		} else if (obj instanceof RailroadSection) {
 			RailroadSection section = (RailroadSection) obj;
-			if (this.data == null) {
-				this.data = section;
-			} else if (this.data instanceof GmlCurve){
-				assert(this.data.equals(section.getCurve()));
-				this.data = section;
+			if (this.curve == null) {
+				this.curve = section.getCurve();
 			} else {
-				throw new IllegalArgumentException();
+				assert(this.curve.equals(section.getCurve()));
+				this.company = section.getCompany();
+				this.line = section.getLine();
 			}
 		} else if (obj instanceof GmlCurve) {
 			GmlCurve curve = (GmlCurve) obj;
-			if (this.data == null) {
-				this.data = curve;
-			} else if (this.data instanceof RailroadSection) {
-				RailroadSection section = (RailroadSection) this.data;
-				assert(curve.equals(section.getCurve()));
+			if (this.curve == null) {
+				this.curve = curve;
 			} else {
-				System.out.println(this.data.getClass().getName());
-				throw new IllegalArgumentException();
+				assert(this.curve.equals(curve));
 			}
 		}
 	}

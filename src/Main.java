@@ -39,8 +39,9 @@ public class Main {
 				SAXParser parser = factory.newSAXParser();
 				long t0 = System.currentTimeMillis();
 				File file = new File(".data/N02-11.xml");
-				HandlerN02 handlerN02 = new HandlerN02();
-				parser.parse(file, handlerN02);
+				HandlerN02 handler = new HandlerN02();
+				parser.parse(file, handler);
+				
 				System.out.printf("N02 %d: %dms\n", 2, (System.currentTimeMillis() - t0));
 			}
 

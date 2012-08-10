@@ -120,6 +120,18 @@ public class HandlerN02 extends DefaultHandler {
 	}
 
 	@Override
+	public void startDocument() throws SAXException {
+		if (this.buf.length() > 0) {
+			System.out.println("Start Document");
+			this.fixCharacters();
+		}
+		if (!this.list.isEmpty()) {
+			throw new IllegalAccessError();
+		}
+		this.list.add(HEADER);
+	}
+
+	@Override
 	public void endDocument() throws SAXException {
 		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
 			throw new IllegalAccessError();
@@ -175,25 +187,12 @@ public class HandlerN02 extends DefaultHandler {
 	}
 
 	@Override
-	public void startDocument() throws SAXException {
-		if (this.buf.length() > 0) {
-			System.out.println("Start Document");
-			this.fixCharacters();
-		}
-		if (!this.list.isEmpty()) {
-			throw new IllegalAccessError();
-		}
-		this.list.add(HEADER);
-	}
-
-	@Override
 	public void startElement(String namespaceURI, String localName, String qName, Attributes attr) throws SAXException {
 		if (this.buf.length() > 0) {
 			System.out.println("Start Element");
 			this.fixCharacters();
 		}
 
-		
 		Class<?> c = this.classMap.get(qName);
 		if (c != null) {
 			try {
@@ -210,7 +209,7 @@ public class HandlerN02 extends DefaultHandler {
 				if (qName.equals("ksj:loc") || qName.equals("ksj:srs")) {
 					String href = attr.getValue("xlink:href");
 					assert("#".equals(href.substring(0, 1)));
-					Data data = this.dataMap.get(href.substring(1));
+					Data data = this.dataMap.remove(href.substring(1));
 					assert(data != null) : href;
 					this.data.link(qName, data);
 				}

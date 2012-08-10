@@ -211,7 +211,7 @@ public class HandlerN07 extends DefaultHandler {
 				if (qName.equals("ksj:brt")) {
 					String href = attr.getValue("xlink:href");
 					assert("#".equals(href.substring(0, 1)));
-					Data data = this.dataMap.get(href.substring(1));
+					Data data = this.dataMap.remove(href.substring(1));
 					assert(data != null) : href;
 					this.data.link(qName, data);
 				}

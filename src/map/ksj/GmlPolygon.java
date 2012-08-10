@@ -1,13 +1,14 @@
 package map.ksj;
 
 import java.awt.Point;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  * 曲線型
  * @author fujiwara
  */
-public class GmlPolygon implements Data {
+public class GmlPolygon implements Data, Serializable {
 	
 	private Point[] points;
 	

@@ -1,10 +1,10 @@
 package map.ksj;
 
-import java.awt.Point;
+import java.io.Serializable;
 
-public class AdministrativeArea implements Data {
+public class AdministrativeArea implements Data, Serializable {
 
-	private Point[] points;
+	private GmlPolygon polygon;
 	private String prn;
 	private String sun;
 	private String con;
@@ -15,7 +15,7 @@ public class AdministrativeArea implements Data {
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlPolygon) {
 			assert("ksj:are".equals(tag));
-			this.points = ((GmlPolygon) obj).getPoints();
+			this.polygon = (GmlPolygon) obj;
 		} else if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:prn".equals(tag)) {

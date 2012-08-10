@@ -1,6 +1,7 @@
 package map.ksj;
 
 import java.awt.Point;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.List;
  * 曲線型
  * @author fujiwara
  */
-public class GmlCurve implements Data {
+public class GmlCurve implements Data, Serializable {
 	
 	private Point[] points;
 	
