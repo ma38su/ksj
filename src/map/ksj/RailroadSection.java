@@ -8,10 +8,6 @@ public class RailroadSection implements Data, Serializable {
 	private String company;
 	private GmlCurve curve;
 
-	public GmlCurve getCurve() {
-		return this.curve;
-	}
-	
 	public String getLine() {
 		return this.line;
 	}
@@ -20,6 +16,10 @@ public class RailroadSection implements Data, Serializable {
 		return this.company;
 	}
 	
+	public GmlCurve getCurve() {
+		return this.curve;
+	}
+
 	@Override
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlCurve) {
@@ -34,5 +34,4 @@ public class RailroadSection implements Data, Serializable {
 			}
 		}
 	}
-	
 }

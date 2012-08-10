@@ -1,8 +1,10 @@
 package map.ksj.handler;
 import java.awt.Point;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -110,25 +112,6 @@ public class HandlerP11 extends DefaultHandler {
 	}
 
 	@Override
-	public void endDocument() throws SAXException {
-		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
-			throw new IllegalAccessError();
-		}
-	}
-
-	@Override
-	public void startDocument() throws SAXException {
-		if (this.buf.length() > 0) {
-			System.out.println("Start Document");
-			this.fixCharacters();
-		}
-		if (!this.list.isEmpty()) {
-			throw new IllegalAccessError();
-		}
-		this.list.add(HEADER);
-	}
-
-	@Override
 	public void startElement(String namespaceURI, String localName, String qName, Attributes attr) throws SAXException {
 		if (this.buf.length() > 0) {
 			System.out.println("Start Element");
@@ -140,7 +123,9 @@ public class HandlerP11 extends DefaultHandler {
 			try {
 				Data data = (Data) c.newInstance();
 				String key = attr.getValue("gml:id");
-				this.dataMap.put(key, data);
+				if (key != null) {
+					this.dataMap.put(key, data);
+				}
 				
 				Data parent = this.dataStack.peek();
 				if (parent == null) {
@@ -161,7 +146,7 @@ public class HandlerP11 extends DefaultHandler {
 				if (qName.equals("ksj:position")) {
 					String href = attr.getValue("xlink:href");
 					assert("#".equals(href.substring(0, 1)));
-					Data link = this.dataMap.get(href.substring(1));
+					Data link = this.dataMap.remove(href.substring(1));
 					assert(link != null) : href;
 					Data data = this.dataStack.peek();
 					data.link(qName, link);
@@ -185,4 +170,47 @@ public class HandlerP11 extends DefaultHandler {
 		}
 	}
 
+	@Override
+	public void startDocument() throws SAXException {
+		if (this.buf.length() > 0) {
+			System.out.println("Start Document");
+			this.fixCharacters();
+		}
+		if (!this.list.isEmpty()) {
+			throw new IllegalAccessError();
+		}
+		this.list.add(HEADER);
+	}
+
+	@Override
+	public void endDocument() throws SAXException {
+		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
+			throw new IllegalAccessError();
+		}
+		assert(checkData());
+	}
+	
+	public boolean checkData() {
+		boolean ret = true;
+		for (Map.Entry<String, Data> entry : this.dataMap.entrySet()) {
+			Data data = entry.getValue();
+			if (!(data instanceof BusStop)) {
+				System.out.println("class: "+ data.getClass() + " - "+ entry.getKey());
+				ret = false;
+				break;
+			}
+		}
+		return ret;
+	}
+
+	public BusStop[] getBusStopArray() {
+		List<BusStop> ret = new ArrayList<BusStop>();
+
+		for (Data data : this.dataMap.values()) {
+			assert(data instanceof BusStop) : data.getClass();
+			ret.add((BusStop) data);
+		}
+		
+		return ret.toArray(new BusStop[]{});
+	}
 }

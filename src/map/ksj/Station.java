@@ -31,6 +31,10 @@ public class Station implements Data, Serializable {
 		return this.instituteType;
 	}
 	
+	public GmlCurve getCurve() {
+		return this.curve;
+	}
+	
 	@Override
 	public void link(String tag, Object obj) {
 		if (obj instanceof String) {

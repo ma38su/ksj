@@ -17,6 +17,20 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import map.ksj.AdministrativeArea;
+import map.ksj.BusRoute;
+import map.ksj.BusStop;
+import map.ksj.RailroadSection;
+import map.ksj.RailwayCollections;
+import map.ksj.Station;
+import map.ksj.handler.HandlerN02;
+import map.ksj.handler.HandlerN03;
+import map.ksj.handler.HandlerN07;
+import map.ksj.handler.HandlerP11;
+
 /**
  * 数値地図のデータ管理
  * @author ma38su
@@ -60,6 +74,8 @@ public class KsjDataManager {
 	 */
 	private final String CACHE_DIR;
 
+	private final SAXParserFactory factory;
+
 	/**
 	 * コンストラクタ
 	 * @param cacheDir データ格納ディレクトリ
@@ -68,6 +84,7 @@ public class KsjDataManager {
 	 */
 	public KsjDataManager(String cacheDir) {
 		this.CACHE_DIR = cacheDir;
+		this.factory = SAXParserFactory.newInstance();
 	}
 	
 
@@ -352,6 +369,122 @@ public class KsjDataManager {
 			}
 			ret = dir.listFiles(filter);
 		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+
+	private static final int TYPE_RAILWAY = 2;
+	
+	/**
+	 * 行政界(面)のコード
+	 */
+	private static final int TYPE_ADMINISTRATIVEAREA = 3;
+
+	/**
+	 * バスルート(線)のコード
+	 */
+	private static final int TYPE_BUS_ROUTE = 7;
+
+	/**
+	 * バス停留所(点)のコード
+	 */
+	private static final int TYPE_BUS_STOP = 11;
+
+	/**
+	 * @param code 都道府県コード
+	 * @return 行政界(面)のデータ配列
+	 */
+	public RailwayCollections getRailway() {
+		this.getKsjFile(TYPE_RAILWAY);
+		RailwayCollections ret = null;
+		try {
+			SAXParser parser = factory.newSAXParser();
+			long t0 = System.currentTimeMillis();
+			File file = new File(".data/N02-11.xml");
+			HandlerN02 handler = new HandlerN02();
+			parser.parse(file, handler);
+			
+			Station[] stations = handler.getStations();
+			RailroadSection[] sections = handler.getRailroadSections();
+			
+			ret = new RailwayCollections(stations, sections);
+
+			System.out.printf("N02 %d: %dms\n", 2, (System.currentTimeMillis() - t0));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
+	/**
+	 * @param code 都道府県コード
+	 * @return 行政界(面)のデータ配列
+	 */
+	public AdministrativeArea[] getAdministrativeAreaArray(int code) {
+		this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
+
+		AdministrativeArea[] ret = null;
+		// N03
+		try {
+			long t0 = System.currentTimeMillis();
+
+			SAXParser parser = this.factory.newSAXParser();
+			File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N03-12_%02d_120331.xml", code, code));
+			HandlerN03 handler = new HandlerN03();
+			parser.parse(file, handler);
+			
+			ret = handler.getAdministrativeAreaList();
+			
+			System.out.printf("N03 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+
+	/**
+	 * @param code 都道府県コード
+	 * @return バスルート(線)のデータ配列
+	 */
+	public BusRoute[] getBusRouteArray(int code) {
+		this.getKsjFile(TYPE_BUS_ROUTE, code);
+		BusRoute[] ret = null;
+		try {
+			long t0 = System.currentTimeMillis();
+
+			SAXParser parser = this.factory.newSAXParser();
+			File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N07-11_%02d.xml", code, code));
+			HandlerN07 handler = new HandlerN07();
+			parser.parse(file, handler);
+			
+			ret = handler.getBusRouteArray();
+			
+			System.out.printf("N07 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+
+	/**
+	 * @param code 都道府県コード
+	 * @return バス停(線)のデータ配列
+	 */
+	public BusStop[] getBusStopArray(int code) {
+		this.getKsjFile(TYPE_BUS_STOP, code);
+		BusStop[] ret = null;
+		try {
+			long t0 = System.currentTimeMillis();
+			SAXParser parser = factory.newSAXParser();
+			File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "P11-10_%02d-jgd-g.xml", code, code));
+			HandlerP11 handler = new HandlerP11();
+			parser.parse(file, handler);
+			
+			ret = handler.getBusStopArray();
+			
+			System.out.printf("P11 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return ret;

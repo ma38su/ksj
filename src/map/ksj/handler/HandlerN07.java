@@ -121,6 +121,64 @@ public class HandlerN07 extends DefaultHandler {
 	}
 
 	@Override
+	public void startElement(String namespaceURI, String localName, String qName, Attributes attr) throws SAXException {
+		if (this.buf.length() > 0) {
+			System.out.println("Start Element");
+			this.fixCharacters();
+		}
+
+		
+		Class<?> c = this.classMap.get(qName);
+		if (c != null) {
+			try {
+				this.data = (Data) c.newInstance();
+				String key = attr.getValue("gml:id");
+				this.dataMap.put(key, this.data);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		if (this.list.size() > 1) {
+			if (this.classMap.containsKey(this.list.getFirst())) {
+				if (qName.equals("ksj:brt")) {
+					String href = attr.getValue("xlink:href");
+					assert("#".equals(href.substring(0, 1)));
+					Data data = this.dataMap.remove(href.substring(1));
+					assert(data != null) : href;
+					this.data.link(qName, data);
+				}
+			}
+		}
+
+		this.list.push(qName);
+	}
+
+	@Override
+	public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
+		this.fixCharacters();
+		
+		String last = this.list.pop();
+		assert(last.equals(qName)) : last + " : "+ qName;
+		
+		if (this.classMap.containsKey(qName)) {
+			this.data = null;
+		}
+	}
+
+	@Override
+	public void startDocument() throws SAXException {
+		if (this.buf.length() > 0) {
+			System.out.println("Start Document");
+			this.fixCharacters();
+		}
+		if (!this.list.isEmpty()) {
+			throw new IllegalAccessError();
+		}
+		this.list.add(HEADER);
+	}
+
+	@Override
 	public void endDocument() throws SAXException {
 		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
 			throw new IllegalAccessError();
@@ -174,63 +232,14 @@ public class HandlerN07 extends DefaultHandler {
 			}
 		}
 	}
-
-	@Override
-	public void startDocument() throws SAXException {
-		if (this.buf.length() > 0) {
-			System.out.println("Start Document");
-			this.fixCharacters();
+	
+	public BusRoute[] getBusRouteArray() {
+		List<BusRoute> ret = new ArrayList<BusRoute>();
+		for (Data data : this.dataMap.values()) {
+			assert(data instanceof BusRoute);
+			ret.add((BusRoute) data);
 		}
-		if (!this.list.isEmpty()) {
-			throw new IllegalAccessError();
-		}
-		this.list.add(HEADER);
-	}
-
-	@Override
-	public void startElement(String namespaceURI, String localName, String qName, Attributes attr) throws SAXException {
-		if (this.buf.length() > 0) {
-			System.out.println("Start Element");
-			this.fixCharacters();
-		}
-
-		
-		Class<?> c = this.classMap.get(qName);
-		if (c != null) {
-			try {
-				this.data = (Data) c.newInstance();
-				String key = attr.getValue("gml:id");
-				this.dataMap.put(key, this.data);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		
-		if (this.list.size() > 1) {
-			if (this.classMap.containsKey(this.list.getFirst())) {
-				if (qName.equals("ksj:brt")) {
-					String href = attr.getValue("xlink:href");
-					assert("#".equals(href.substring(0, 1)));
-					Data data = this.dataMap.remove(href.substring(1));
-					assert(data != null) : href;
-					this.data.link(qName, data);
-				}
-			}
-		}
-
-		this.list.push(qName);
-	}
-
-	@Override
-	public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
-		this.fixCharacters();
-		
-		String last = this.list.pop();
-		assert(last.equals(qName)) : last + " : "+ qName;
-		
-		if (this.classMap.containsKey(qName)) {
-			this.data = null;
-		}
+		return ret.toArray(new BusRoute[]{});
 	}
 
 }

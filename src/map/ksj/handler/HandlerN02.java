@@ -35,8 +35,6 @@ public class HandlerN02 extends DefaultHandler {
 	
 	private Data data;
 
-	private List<GmlCurve> curveList;
-
 	private StringBuilder buf;
 
 	private Set<String> charactersTarget;
@@ -62,10 +60,6 @@ public class HandlerN02 extends DefaultHandler {
 		this.buf = new StringBuilder();
 	}
 	
-	public GmlCurve[] getCurves() {
-		return this.curveList.toArray(new GmlCurve[]{});
-	}
-
 	@Override
 	public void characters(char[] ch, int start, int length) throws SAXException {
 		String tag = this.list.getFirst();
@@ -120,73 +114,6 @@ public class HandlerN02 extends DefaultHandler {
 	}
 
 	@Override
-	public void startDocument() throws SAXException {
-		if (this.buf.length() > 0) {
-			System.out.println("Start Document");
-			this.fixCharacters();
-		}
-		if (!this.list.isEmpty()) {
-			throw new IllegalAccessError();
-		}
-		this.list.add(HEADER);
-	}
-
-	@Override
-	public void endDocument() throws SAXException {
-		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
-			throw new IllegalAccessError();
-		}
-		
-		this.curveList = new ArrayList<GmlCurve>();
-
-		Map<GmlCurve, Integer> idxMap = new HashMap<GmlCurve, Integer>();
-		Map<Point2D, List<GmlCurve>> pointMap = new HashMap<Point2D, List<GmlCurve>>();
-
-		for (Data data : this.dataMap.values()) {
-			if (data instanceof GmlCurve) {
-				GmlCurve curve = (GmlCurve) data;
-				
-				if (!idxMap.containsKey(curve)) {
-					idxMap.put(curve, idxMap.size());
-					curveList.add(curve);
-				}
-
-				Point p1 = curve.getFirstPoint();
-				List<GmlCurve> curves1 = pointMap.get(p1);
-				if (curves1 == null) {
-					curves1 = new ArrayList<GmlCurve>();
-					pointMap.put(p1, curves1);
-				}
-				curves1.add(curve);
-				
-				Point p2 = curve.getLastPoint();
-				List<GmlCurve> curves2 = pointMap.get(p2);
-				if (curves2 == null) {
-					curves2 = new ArrayList<GmlCurve>();
-					pointMap.put(p2, curves2);
-				}
-				curves2.add(curve);
-			}
-		}
-
-		for (List<GmlCurve> curves : pointMap.values()) {
-			if (curves.size() >= 2) {
-				for (int i = 0; i < curves.size(); i++) {
-					GmlCurve c1 = curves.get(i);
-					int idx1 = idxMap.get(c1);
-					for (int j = i + 1; j < curves.size(); j++) {
-						GmlCurve c2 = curves.get(j);
-						int idx2 = idxMap.get(c2);
-
-						c1.addLink(idx2);
-						c2.addLink(idx1);
-					}
-				}
-			}
-		}
-	}
-
-	@Override
 	public void startElement(String namespaceURI, String localName, String qName, Attributes attr) throws SAXException {
 		if (this.buf.length() > 0) {
 			System.out.println("Start Element");
@@ -231,4 +158,112 @@ public class HandlerN02 extends DefaultHandler {
 		}
 	}
 
+	@Override
+	public void startDocument() throws SAXException {
+		if (this.buf.length() > 0) {
+			System.out.println("Start Document");
+			this.fixCharacters();
+		}
+		if (!this.list.isEmpty()) {
+			throw new IllegalAccessError();
+		}
+		this.list.add(HEADER);
+	}
+	
+	@Override
+	public void endDocument() throws SAXException {
+		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
+			throw new IllegalAccessError();
+		}
+		
+		assert(this.checkData());
+		
+		this.checkLink();
+	}
+	
+	public boolean checkData() {
+		boolean ret = true;
+		for (Data data : this.dataMap.values()) {
+			if (!(data instanceof RailroadSection) && !(data instanceof Station)) {
+				ret = false;
+			}
+		}
+		return ret;
+	}
+
+	public void checkLink() {
+		Map<GmlCurve, Integer> idxMap = new HashMap<GmlCurve, Integer>();
+		Map<Point2D, List<GmlCurve>> pointMap = new HashMap<Point2D, List<GmlCurve>>();
+
+		for (Data data : this.dataMap.values()) {
+			GmlCurve curve = null;
+			if (data instanceof Station) {
+				curve = ((Station) data).getCurve();
+			} else if (data instanceof RailroadSection) {
+				curve = ((RailroadSection) data).getCurve();
+			} else {
+				throw new IllegalStateException();
+			}
+				
+			if (!idxMap.containsKey(curve)) {
+				idxMap.put(curve, idxMap.size());
+			}
+
+			Point p1 = curve.getFirstPoint();
+			List<GmlCurve> curves1 = pointMap.get(p1);
+			if (curves1 == null) {
+				curves1 = new ArrayList<GmlCurve>();
+				pointMap.put(p1, curves1);
+			}
+			curves1.add(curve);
+			
+			Point p2 = curve.getLastPoint();
+			List<GmlCurve> curves2 = pointMap.get(p2);
+			if (curves2 == null) {
+				curves2 = new ArrayList<GmlCurve>();
+				pointMap.put(p2, curves2);
+			}
+			curves2.add(curve);
+		}
+
+		for (List<GmlCurve> curves : pointMap.values()) {
+			if (curves.size() >= 2) {
+				for (int i = 0; i < curves.size(); i++) {
+					GmlCurve c1 = curves.get(i);
+					int idx1 = idxMap.get(c1);
+					for (int j = i + 1; j < curves.size(); j++) {
+						GmlCurve c2 = curves.get(j);
+						int idx2 = idxMap.get(c2);
+
+						c1.addLink(idx2);
+						c2.addLink(idx1);
+					}
+				}
+			}
+		}
+	}
+	
+	public Station[] getStations() {
+		List<Station> ret = new ArrayList<Station>();
+		for (Data data : this.dataMap.values()) {
+			if (data instanceof Station) {
+				ret.add((Station) data);
+			} else {
+				assert(data instanceof RailroadSection);
+			}
+		}
+		return ret.toArray(new Station[]{});
+	}
+	
+	public RailroadSection[] getRailroadSections() {
+		List<RailroadSection> ret = new ArrayList<RailroadSection>();
+		for (Data data : this.dataMap.values()) {
+			if (data instanceof RailroadSection) {
+				ret.add((RailroadSection) data);
+			} else {
+				assert(data instanceof Station);
+			}
+		}
+		return ret.toArray(new RailroadSection[]{});
+	}
 }
