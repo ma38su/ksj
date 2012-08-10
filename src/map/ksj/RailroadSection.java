@@ -1,4 +1,4 @@
-package model;
+package map.ksj;
 
 public class RailroadSection implements Data {
 

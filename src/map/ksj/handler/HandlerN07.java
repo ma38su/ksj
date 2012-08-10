@@ -1,4 +1,4 @@
-package handler;
+package map.ksj.handler;
 import java.awt.Point;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -8,9 +8,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import model.BusRoute;
-import model.GmlCurve;
-import model.Data;
+import map.ksj.BusRoute;
+import map.ksj.Data;
+import map.ksj.GmlCurve;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;

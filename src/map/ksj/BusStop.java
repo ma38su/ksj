@@ -1,4 +1,4 @@
-package model;
+package map.ksj;
 
 import java.awt.Point;
 import java.util.ArrayList;

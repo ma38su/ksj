@@ -1,4 +1,4 @@
-package handler;
+package map.ksj.handler;
 import java.awt.Point;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -9,21 +9,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import model.GmlCurve;
-import model.Data;
-import model.RailroadSection;
-import model.Station;
+import map.ksj.AdministrativeArea;
+import map.ksj.Data;
+import map.ksj.GmlCurve;
+import map.ksj.GmlPolygon;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * 国土数値情報JPGIS2.1(GML)形式の鉄道(線)を読み込むための
+ * 国土数値情報JPGIS2.1(GML)形式の行政界(面)を読み込むための
  * DefaultHandlerの継承クラス
  * @author fujiwara
  */
-public class HandlerN02 extends DefaultHandler {
+public class HandlerN03 extends DefaultHandler {
 
 	private static final String HEADER = "XMLDocument";
 	
@@ -41,7 +41,7 @@ public class HandlerN02 extends DefaultHandler {
 
 	private Set<String> charactersTarget;
 
-	public HandlerN02() throws ClassNotFoundException {
+	public HandlerN03() throws ClassNotFoundException {
 
 		this.list = new LinkedList<String>();
 
@@ -49,16 +49,17 @@ public class HandlerN02 extends DefaultHandler {
 		
 		this.classMap = new HashMap<String, Class<?>>();
 		this.classMap.put("gml:Curve", GmlCurve.class);
-		this.classMap.put("ksj:RailroadSection", RailroadSection.class);
-		this.classMap.put("ksj:Station", Station.class);
+		this.classMap.put("ksj:AdministrativeArea", AdministrativeArea.class);
+		this.classMap.put("gml:Surface", GmlPolygon.class);
 
 		this.charactersTarget = new HashSet<String>();
 		this.charactersTarget.add("gml:posList");
-		this.charactersTarget.add("ksj:opc");
-		this.charactersTarget.add("ksj:lin");
-		this.charactersTarget.add("ksj:stn");
-		this.charactersTarget.add("ksj:int");
-		this.charactersTarget.add("ksj:rar");
+		this.charactersTarget.add("ksj:prn");
+		this.charactersTarget.add("ksj:sun");
+		this.charactersTarget.add("ksj:con");
+		this.charactersTarget.add("ksj:cn2");
+		this.charactersTarget.add("ksj:aac");
+
 		this.buf = new StringBuilder();
 	}
 	
@@ -206,8 +207,8 @@ public class HandlerN02 extends DefaultHandler {
 		}
 		
 		if (this.list.size() > 1) {
-			if (this.classMap.containsKey(this.list.getFirst())) {
-				if (qName.equals("ksj:loc") || qName.equals("ksj:srs")) {
+			if (this.classMap.containsKey(this.list.peek()) || this.data != null) {
+				if (qName.equals("gml:curveMember") || qName.equals("ksj:are")) {
 					String href = attr.getValue("xlink:href");
 					assert("#".equals(href.substring(0, 1)));
 					Data data = this.dataMap.get(href.substring(1));
