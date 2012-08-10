@@ -7,6 +7,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -69,21 +71,25 @@ public class KsjDataManager {
 	
 	private static final String KSJ_URL_BASE = "http://nlftp.mlit.go.jp/ksj/gml/data/";
 
-	/**
-	 * 保存フォルダ
-	 */
-	private final String CACHE_DIR;
-
 	private final SAXParserFactory factory;
 
 	/**
-	 * コンストラクタ
-	 * @param cacheDir データ格納ディレクトリ
-	 * @param status ステータスバー
-	 * @throws IOException 入出力エラー
+	 * 保存フォルダ
 	 */
-	public KsjDataManager(String cacheDir) {
-		this.CACHE_DIR = cacheDir;
+	private final String baseDir;
+
+	/**
+	 * シリアライズデータの保存ディレクトリ
+	 */
+	private String serializeDir;
+
+	/**
+	 * @param baseDir データ格納ディレクトリ
+	 * @param serializeDir シリアライズデータの格納ディレクトリ
+	 */
+	public KsjDataManager(String baseDir, String serializeDir) {
+		this.baseDir = baseDir;
+		this.serializeDir = serializeDir;
 		this.factory = SAXParserFactory.newInstance();
 	}
 	
@@ -197,7 +203,7 @@ public class KsjDataManager {
 	}
 
 	private File getFile(int type, int code) {
-		return new File(this.CACHE_DIR +File.separatorChar+ String.format("%02d" +File.separatorChar+ KSJ_TYPE_FORMAT[type] +"-%02d.zip", code, code));
+		return new File(this.baseDir +File.separatorChar+ String.format("%02d" +File.separatorChar+ KSJ_TYPE_FORMAT[type] +"-%02d.zip", code, code));
 	}
 	
 	private static boolean hasExtracted(File dir, FileFilter filter) {
@@ -213,7 +219,7 @@ public class KsjDataManager {
 	}
 	
 	public File[] getKsjFile(final int type) {
-		File zip = new File(this.CACHE_DIR +File.separatorChar+ KSJ_TYPE_FORMAT[type] +".zip");
+		File zip = new File(this.baseDir +File.separatorChar+ KSJ_TYPE_FORMAT[type] +".zip");
 		File dir = zip.getParentFile();
 		if (!dir.isDirectory() && !dir.mkdirs()) {
 			throw new IllegalStateException();
@@ -396,24 +402,31 @@ public class KsjDataManager {
 	 * @return 行政界(面)のデータ配列
 	 */
 	public RailwayCollections getRailway() {
-		this.getKsjFile(TYPE_RAILWAY);
-		RailwayCollections ret = null;
-		try {
-			SAXParser parser = factory.newSAXParser();
-			long t0 = System.currentTimeMillis();
-			File file = new File(".data/N02-11.xml");
-			HandlerN02 handler = new HandlerN02();
-			parser.parse(file, handler);
-			
-			Station[] stations = handler.getStations();
-			RailroadSection[] sections = handler.getRailroadSections();
-			
-			ret = new RailwayCollections(stations, sections);
+		long t0 = System.currentTimeMillis();
 
-			System.out.printf("N02 %d: %dms\n", 2, (System.currentTimeMillis() - t0));
-		} catch (Exception e) {
-			e.printStackTrace();
+		String name = "N02.obj";
+		RailwayCollections ret = this.readSerializable(name, RailwayCollections.class);
+		if (ret == null) {
+			this.getKsjFile(TYPE_RAILWAY);
+			try {
+				SAXParser parser = factory.newSAXParser();
+				File file = new File(".data/N02-11.xml");
+				HandlerN02 handler = new HandlerN02();
+				parser.parse(file, handler);
+				
+				Station[] stations = handler.getStations();
+				RailroadSection[] sections = handler.getRailroadSections();
+				
+				ret = new RailwayCollections(stations, sections);
+
+				writeSerializable(name, ret);
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
+		System.out.printf("N02 %d: %dms\n", 2, (System.currentTimeMillis() - t0));
+		
 		return ret;
 	}
 	
@@ -422,24 +435,28 @@ public class KsjDataManager {
 	 * @return 行政界(面)のデータ配列
 	 */
 	public AdministrativeArea[] getAdministrativeAreaArray(int code) {
-		this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
+		long t0 = System.currentTimeMillis();
 
-		AdministrativeArea[] ret = null;
-		// N03
-		try {
-			long t0 = System.currentTimeMillis();
+		String name = String.format("N03-%02d.obj", code);
+		AdministrativeArea[] ret = this.readSerializable(name, AdministrativeArea[].class);
+		if (ret == null) {
+			this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
+			try {
+				SAXParser parser = this.factory.newSAXParser();
+				File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N03-12_%02d_120331.xml", code, code));
+				HandlerN03 handler = new HandlerN03();
+				parser.parse(file, handler);
+				
+				ret = handler.getAdministrativeAreaList();
 
-			SAXParser parser = this.factory.newSAXParser();
-			File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N03-12_%02d_120331.xml", code, code));
-			HandlerN03 handler = new HandlerN03();
-			parser.parse(file, handler);
-			
-			ret = handler.getAdministrativeAreaList();
-			
-			System.out.printf("N03 %d: %dms\n", code, (System.currentTimeMillis() - t0));
-		} catch (Exception e) {
-			e.printStackTrace();
+				writeSerializable(name, ret);
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
+		System.out.printf("N03 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		
 		return ret;
 	}
 
@@ -448,22 +465,29 @@ public class KsjDataManager {
 	 * @return バスルート(線)のデータ配列
 	 */
 	public BusRoute[] getBusRouteArray(int code) {
-		this.getKsjFile(TYPE_BUS_ROUTE, code);
-		BusRoute[] ret = null;
-		try {
-			long t0 = System.currentTimeMillis();
+		long t0 = System.currentTimeMillis();
 
-			SAXParser parser = this.factory.newSAXParser();
-			File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N07-11_%02d.xml", code, code));
-			HandlerN07 handler = new HandlerN07();
-			parser.parse(file, handler);
-			
-			ret = handler.getBusRouteArray();
-			
-			System.out.printf("N07 %d: %dms\n", code, (System.currentTimeMillis() - t0));
-		} catch (Exception e) {
-			e.printStackTrace();
+		String name = String.format("N07-%02d.obj", code);
+		BusRoute[] ret = this.readSerializable(name, BusRoute[].class);
+		if (ret == null) {
+			this.getKsjFile(TYPE_BUS_ROUTE, code);
+			try {
+				SAXParser parser = this.factory.newSAXParser();
+				File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N07-11_%02d.xml", code, code));
+				HandlerN07 handler = new HandlerN07();
+				parser.parse(file, handler);
+				
+				ret = handler.getBusRouteArray();
+
+				writeSerializable(name, ret);
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
+		
+		System.out.printf("N07 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+
 		return ret;
 	}
 
@@ -472,22 +496,104 @@ public class KsjDataManager {
 	 * @return バス停(線)のデータ配列
 	 */
 	public BusStop[] getBusStopArray(int code) {
-		this.getKsjFile(TYPE_BUS_STOP, code);
-		BusStop[] ret = null;
+		long t0 = System.currentTimeMillis();
+
+		String name = String.format("P11-%02d.obj", code);
+		BusStop[] ret = this.readSerializable(name, BusStop[].class);
+		if (ret == null) {
+			this.getKsjFile(TYPE_BUS_STOP, code);
+			try {
+				SAXParser parser = factory.newSAXParser();
+				File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "P11-10_%02d-jgd-g.xml", code, code));
+				HandlerP11 handler = new HandlerP11();
+				parser.parse(file, handler);
+				
+				ret = handler.getBusStopArray();
+				
+				writeSerializable(name, ret);
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		System.out.printf("P11 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		
+		return ret;
+	}
+	
+	/**
+	 * オブジェクトを直列化してファイルに保存します。
+	 * 衝突を避けるため.tmpファイルに保存後、リネームします。
+	 * @param name 保存ファイル名
+	 * @param obj シリアライズ可能なオブジェクト
+	 * @return 保存の成否
+	 */
+	public boolean writeSerializable(String name, Object obj) {
+		boolean ret = false;
+		String path = this.serializeDir +File.separator + name;
+		File file = new File(path + ".tmp");
+		if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+			return false;
+		}
 		try {
-			long t0 = System.currentTimeMillis();
-			SAXParser parser = factory.newSAXParser();
-			File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "P11-10_%02d-jgd-g.xml", code, code));
-			HandlerP11 handler = new HandlerP11();
-			parser.parse(file, handler);
-			
-			ret = handler.getBusStopArray();
-			
-			System.out.printf("P11 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
+			try {
+				out.writeObject(obj);
+				out.flush();
+			} finally {
+				out.close();
+			}
+			if (!file.renameTo(new File(this.serializeDir +File.separator + name))) {
+				if (!file.delete()) {
+					throw new IllegalStateException("Failure of delete: "+ file);
+				}
+				return ret;
+			}
 		} catch (Exception e) {
+			ret = false;
 			e.printStackTrace();
+			if (file.isFile() && !file.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ file);
+			}
+			File file2 = new File(this.serializeDir +File.separator + name);
+			if (file2.isFile() && !file2.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ file);
+			}
 		}
 		return ret;
 	}
 
+	/**
+	 * ファイルから直列化して保存されたオブジェクトを読み込みます。
+	 * @param name ファイル名
+	 * @param c 
+	 * @return オブジェクト
+	 */
+	private <T> T readSerializable(String name, Class<T> c) {
+		T ret = null;
+		String path = this.serializeDir +File.separator + name;
+		File file = new File(path);
+		if (file.isFile()) {
+			try {
+				ObjectInputStream in = null;
+				try {
+					in = new ObjectInputStream(new FileInputStream(file));
+					Object obj = in.readObject();
+					ret = c.cast(obj);
+				} finally {
+					if (in != null) {
+						in.close();
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				ret = null;
+				if (file.isFile() && !file.delete()) {
+					throw new IllegalStateException("Failure of delete: "+ file);
+				}
+			}
+		}
+		return ret;
+	}
 }

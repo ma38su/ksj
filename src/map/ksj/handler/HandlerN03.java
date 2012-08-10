@@ -193,6 +193,7 @@ public class HandlerN03 extends DefaultHandler {
 		for (Data data : this.dataMap.values()) {
 			list.add((AdministrativeArea) data);
 		}
+		assert(!list.isEmpty());
 		return list.toArray(new AdministrativeArea[]{});
 	}
 

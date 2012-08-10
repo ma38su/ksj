@@ -4,7 +4,7 @@ import database.KsjDataManager;
 public class Main {
 	public static void main(String[] args) {
 		
-		KsjDataManager mgr = new KsjDataManager(".data");
+		KsjDataManager mgr = new KsjDataManager(".data", ".serialize");
 
 		System.out.println("<Parse Ksj Data>");
 		// N02

@@ -1,6 +1,8 @@
 package map.ksj;
 
-public class RailwayCollections {
+import java.io.Serializable;
+
+public class RailwayCollections implements Serializable {
 
 	private final RailroadSection[] sections;
 	private final Station[] stations;
@@ -17,5 +19,4 @@ public class RailwayCollections {
 	public RailroadSection[] getRailroadSection() {
 		return this.sections;
 	}
-	
 }
