@@ -5,7 +5,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Curve extends Data {
+/**
+ * 曲線型
+ * @author fujiwara
+ */
+public class GmlCurve implements Data {
 	
 	private Point[] points;
 	
@@ -35,7 +39,7 @@ public class Curve extends Data {
 		return this.points[this.points.length - 1];
 	}
 	
-	public void send(String tag, Object obj) {
+	public void link(String tag, Object obj) {
 		if (obj instanceof Point[]) {
 			this.points = (Point[]) obj;
 		}
@@ -44,8 +48,8 @@ public class Curve extends Data {
 	@Override
 	public boolean equals(Object obj) {
 		boolean ret = false;
-		if (obj instanceof Curve) {
-			Curve curve = (Curve) obj;
+		if (obj instanceof GmlCurve) {
+			GmlCurve curve = (GmlCurve) obj;
 			ret = Arrays.equals(this.points, curve.points) || Arrays.equals(this.points, curve.reversePoints());
 		}
 		return ret;

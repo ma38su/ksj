@@ -1,48 +1,118 @@
 package model;
 
-public class BusRoute extends Data {
+/**
+ * バスルートのクラス
+ * @author fujiwara
+ */
+public class BusRoute implements Data {
 
-	private Curve curve;
+	/**
+	 * 路線
+	 */
+	private GmlCurve curve;
 
-	private int bsc;
-	private String city;
-	private double rpd;
-	private double rps;
-	private double rph;
+	/**
+	 * バス区分
+	 */
+	private int type;
+	
+	/**
+	 * 事業者名
+	 */
+	private String operationCommunity;
+	
+	/**
+	 * 平日運行頻度
+	 */
+	private double ratePerDay;
+
+	/**
+	 * 土曜日運行頻度
+	 */
+	private double ratePerSaturday;
+	
+	/**
+	 * 日祝日運行頻度
+	 */
+	private double ratePerHoliday;
+	
+	/**
+	 * バス路線の系統番号・系統名
+	 * 系統が未整備であれば路線名・事業者名と連番
+	 */
 	private String line;
-
-	public Curve getCurve() {
+	
+	/**
+	 * @return バス区分コード
+	 */
+	public int getType() {
+		return this.type;
+	}
+	
+	/**
+	 * @return 事業者名
+	 */
+	public String getOperationCommunity() {
+		return this.operationCommunity;
+	}
+	
+	/**
+	 * @return 路線
+	 */
+	public GmlCurve getCurve() {
 		return this.curve;
 	}
-	
-	public String getCity() {
-		return this.city;
-	}
-	
+
+	/**
+	 * @return バス系統
+	 */
 	public String getLine() {
 		return this.line;
 	}
+
+	/**
+	 * @return 平日運行頻度
+	 */
+	public double getRateParDay() {
+		return this.ratePerDay;
+	}
+
+	/**
+	 * @return 日祝日運行頻度
+	 */
+	public double getRatePerHoliday() {
+		return this.ratePerHoliday;
+	}
+
+	/**
+	 * @return 土曜日運行頻度
+	 */
+	public double getRatePerSaturday() {
+		return this.ratePerSaturday;
+	}
 	
 	@Override
-	public void send(String tag, Object obj) {
-		if (obj instanceof Curve) {
-			if (tag.equals("ksj:brt")) {
-				this.curve = (Curve) obj;
+	public void link(String tag, Object obj) {
+		if (obj instanceof GmlCurve) {
+			if ("ksj:brt".equals(tag)) {
+				this.curve = (GmlCurve) obj;
 			}
 		} else if (obj instanceof String) {
 			String string = (String) obj;
-			if (tag.equals("ksj:bsc")) {
-				this.bsc = Integer.parseInt(string);
-			} else if (tag.equals("ksj:boc")) {
-				this.city = string;
-			} else if (tag.equals("ksj:bln")) {
+			if ("ksj:bsc".equals(tag)) {
+				this.type = Integer.parseInt(string);
+			} else if ("ksj:boc".equals(tag)) {
+				this.operationCommunity = string;
+			} else if ("ksj:bln".equals(tag)) {
 				this.line = string;
-			} else if (tag.equals("ksj:rpd")) {
-				this.rpd = Double.parseDouble(string);
-			} else if (tag.equals("ksj:rps")) {
-				this.rps = Double.parseDouble(string);
-			} else if (tag.equals("ksj:rph")) {
-				this.rph = Double.parseDouble(string);
+			} else if ("ksj:rpd".equals(tag)) {
+				this.ratePerDay = Double.parseDouble(string);
+			} else if ("ksj:rps".equals(tag)) {
+				this.ratePerSaturday = Double.parseDouble(string);
+			} else if ("ksj:rph".equals(tag)) {
+				this.ratePerHoliday = Double.parseDouble(string);
+			} else if ("ksj:rmk".equals(tag)) {
+				System.out.println("remark: "+ string);
 			}
 		}
 	}

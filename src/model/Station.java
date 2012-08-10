@@ -1,7 +1,7 @@
 package model;
 
 
-public class Station extends Data {
+public class Station implements Data {
 
 	private String line;
 	private String company;
@@ -31,7 +31,7 @@ public class Station extends Data {
 	}
 	
 	@Override
-	public void send(String tag, Object obj) {
+	public void link(String tag, Object obj) {
 		if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:lin".equals(tag)) {
@@ -49,14 +49,14 @@ public class Station extends Data {
 			RailroadSection section = (RailroadSection) obj;
 			if (this.data == null) {
 				this.data = section;
-			} else if (this.data instanceof Curve){
+			} else if (this.data instanceof GmlCurve){
 				assert(this.data.equals(section.getCurve()));
 				this.data = section;
 			} else {
 				throw new IllegalArgumentException();
 			}
-		} else if (obj instanceof Curve) {
-			Curve curve = (Curve) obj;
+		} else if (obj instanceof GmlCurve) {
+			GmlCurve curve = (GmlCurve) obj;
 			if (this.data == null) {
 				this.data = curve;
 			} else if (this.data instanceof RailroadSection) {

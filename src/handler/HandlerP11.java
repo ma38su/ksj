@@ -1,27 +1,26 @@
 package handler;
 import java.awt.Point;
-import java.awt.geom.Point2D;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import model.BusRoute;
-import model.GmlCurve;
+import model.BusRouteInfomation;
+import model.BusStop;
 import model.Data;
+import model.GmlPoint;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * 国土数値情報JPGIS2.1(GML)形式のバスルート(線)を読み込むための
+ * 国土数値情報JPGIS2.1(GML)形式のバス停留所(点)を読み込むための
  * DefaultHandlerの継承クラス
  * @author fujiwara
  */
-public class HandlerN07 extends DefaultHandler {
+public class HandlerP11 extends DefaultHandler {
 
 	private static final String HEADER = "XMLDocument";
 	
@@ -31,40 +30,34 @@ public class HandlerN07 extends DefaultHandler {
 
 	private Map<String, Data> dataMap;
 	
-	private Data data;
-
-	private List<GmlCurve> curveList;
+	private LinkedList<Data> dataStack;
 
 	private StringBuilder buf;
 
-	private HashSet<String> charactersTarget;
+	private Set<String> charactersTarget;
 
-	public HandlerN07() throws ClassNotFoundException {
+	public HandlerP11() throws ClassNotFoundException {
 
 		this.list = new LinkedList<String>();
+		
+		this.dataStack = new LinkedList<Data>();
 
 		this.dataMap = new HashMap<String, Data>();
 		
 		this.classMap = new HashMap<String, Class<?>>();
-		this.classMap.put("gml:Curve", GmlCurve.class);
-		this.classMap.put("ksj:BusRoute", BusRoute.class);
-		
-		this.charactersTarget = new HashSet<String>();
-		this.charactersTarget.add("gml:posList");
-		this.charactersTarget.add("ksj:bsc");
-		this.charactersTarget.add("ksj:bln");
-		this.charactersTarget.add("ksj:boc");
-		this.charactersTarget.add("ksj:rpd");
-		this.charactersTarget.add("ksj:rps");
-		this.charactersTarget.add("ksj:rph");
+		this.classMap.put("gml:Point", GmlPoint.class);
+		this.classMap.put("ksj:busRouteInformation", BusRouteInfomation.class);
+		this.classMap.put("ksj:BusStop", BusStop.class);
 
+		this.charactersTarget = new HashSet<String>();
+		this.charactersTarget.add("gml:pos");
+		this.charactersTarget.add("ksj:busStopName");
+		this.charactersTarget.add("ksj:busType");
+		this.charactersTarget.add("ksj:busOperationCompany");
+		this.charactersTarget.add("ksj:busLineName");
 		this.buf = new StringBuilder();
 	}
 	
-	public GmlCurve[] getCurves() {
-		return this.curveList.toArray(new GmlCurve[]{});
-	}
-
 	@Override
 	public void characters(char[] ch, int start, int length) throws SAXException {
 		String tag = this.list.getFirst();
@@ -76,20 +69,16 @@ public class HandlerN07 extends DefaultHandler {
 	public void fixCharacters() {
 		if (this.buf.length() > 0) {
 			String tag = this.list.peek();
-			if ("gml:posList".equals(tag)) {
+			Data data = this.dataStack.peek();
+			if ("gml:pos".equals(tag)) {
 				String string = this.buf.toString().replaceFirst("^\\s+", "");
 				String[] param = string.split("\\s+");
-				List<Point> points = new ArrayList<Point>();
-				for (int i = 0; i + 1 < param.length; i += 2) {
-					int lat = parseFixInt(param[i]);
-					int lng = parseFixInt(param[i + 1]);
-					points.add(new Point(lat, lng));
-				}
-				this.data.link(tag, points.toArray(new Point[]{}));
-			} else if (this.data != null) {
-				this.data.link(tag, this.buf.toString());
-			} else {
-				System.out.println("buf: "+ this.buf.toString());
+				assert(param.length == 2);
+				int lat = parseFixInt(param[0]);
+				int lng = parseFixInt(param[1]);
+				data.link(tag, new Point(lat, lng));
+			} else if (data != null) {
+				data.link(tag, this.buf.toString());
 			}
 			this.buf.setLength(0);
 		}
@@ -125,54 +114,6 @@ public class HandlerN07 extends DefaultHandler {
 		if (!HEADER.equals(this.list.pop()) || !this.list.isEmpty()) {
 			throw new IllegalAccessError();
 		}
-		
-		this.curveList = new ArrayList<GmlCurve>();
-
-		Map<GmlCurve, Integer> idxMap = new HashMap<GmlCurve, Integer>();
-		Map<Point2D, List<GmlCurve>> pointMap = new HashMap<Point2D, List<GmlCurve>>();
-
-		for (Data data : this.dataMap.values()) {
-			if (data instanceof GmlCurve) {
-				GmlCurve curve = (GmlCurve) data;
-				
-				if (!idxMap.containsKey(curve)) {
-					idxMap.put(curve, idxMap.size());
-					curveList.add(curve);
-				}
-
-				Point p1 = curve.getFirstPoint();
-				List<GmlCurve> curves1 = pointMap.get(p1);
-				if (curves1 == null) {
-					curves1 = new ArrayList<GmlCurve>();
-					pointMap.put(p1, curves1);
-				}
-				curves1.add(curve);
-				
-				Point p2 = curve.getLastPoint();
-				List<GmlCurve> curves2 = pointMap.get(p2);
-				if (curves2 == null) {
-					curves2 = new ArrayList<GmlCurve>();
-					pointMap.put(p2, curves2);
-				}
-				curves2.add(curve);
-			}
-		}
-
-		for (List<GmlCurve> curves : pointMap.values()) {
-			if (curves.size() >= 2) {
-				for (int i = 0; i < curves.size(); i++) {
-					GmlCurve c1 = curves.get(i);
-					int idx1 = idxMap.get(c1);
-					for (int j = i + 1; j < curves.size(); j++) {
-						GmlCurve c2 = curves.get(j);
-						int idx2 = idxMap.get(c2);
-
-						c1.addLink(idx2);
-						c2.addLink(idx1);
-					}
-				}
-			}
-		}
 	}
 
 	@Override
@@ -194,26 +135,37 @@ public class HandlerN07 extends DefaultHandler {
 			this.fixCharacters();
 		}
 
-		
 		Class<?> c = this.classMap.get(qName);
 		if (c != null) {
 			try {
-				this.data = (Data) c.newInstance();
+				Data data = (Data) c.newInstance();
 				String key = attr.getValue("gml:id");
-				this.dataMap.put(key, this.data);
+				this.dataMap.put(key, data);
+				
+				Data parent = this.dataStack.peek();
+				if (parent == null) {
+					this.dataStack.push(data);
+				} else if (!data.getClass().equals(parent.getClass())) {
+					parent.link(qName, data);
+					this.dataStack.push(data);
+				} else {
+					System.out.println("AAA");
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
-		
+	
 		if (this.list.size() > 1) {
 			if (this.classMap.containsKey(this.list.getFirst())) {
-				if (qName.equals("ksj:brt")) {
+				if (qName.equals("ksj:position")) {
 					String href = attr.getValue("xlink:href");
 					assert("#".equals(href.substring(0, 1)));
-					Data data = this.dataMap.get(href.substring(1));
-					assert(data != null) : href;
-					this.data.link(qName, data);
+					Data link = this.dataMap.get(href.substring(1));
+					assert(link != null) : href;
+					Data data = this.dataStack.peek();
+					data.link(qName, link);
+					System.out.println("DEBUG: "+ data.getClass() + " / "+ link.getClass());
 				}
 			}
 		}
@@ -229,7 +181,8 @@ public class HandlerN07 extends DefaultHandler {
 		assert(last.equals(qName)) : last + " : "+ qName;
 		
 		if (this.classMap.containsKey(qName)) {
-			this.data = null;
+			assert(this.dataStack.size() > 0);
+			this.dataStack.pop();
 		}
 	}
 

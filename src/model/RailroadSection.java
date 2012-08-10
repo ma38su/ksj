@@ -1,12 +1,12 @@
 package model;
 
-public class RailroadSection extends Data {
+public class RailroadSection implements Data {
 
 	private String line;
 	private String company;
-	private Curve curve;
+	private GmlCurve curve;
 
-	public Curve getCurve() {
+	public GmlCurve getCurve() {
 		return this.curve;
 	}
 	
@@ -19,14 +19,12 @@ public class RailroadSection extends Data {
 	}
 	
 	@Override
-	public void send(String tag, Object obj) {
-		if (obj instanceof Curve) {
-			if ("ksj:loc".equals(tag)) {
-				this.curve = (Curve) obj;
-			}
+	public void link(String tag, Object obj) {
+		if (obj instanceof GmlCurve) {
+			assert("ksj:loc".equals(tag));
+			this.curve = (GmlCurve) obj;
 		} else if (obj instanceof String) {
 			String string = (String) obj;
-			System.out.println(tag + ": "+ string);
 			if ("ksj:lin".equals(tag)) {
 				this.line = string;
 			} else if ("ksj:opc".equals(tag)) {
