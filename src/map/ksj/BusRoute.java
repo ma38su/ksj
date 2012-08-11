@@ -50,7 +50,7 @@ public class BusRoute implements Data, Serializable {
 	public int getType() {
 		return this.type;
 	}
-	
+
 	/**
 	 * @return 事業者名
 	 */

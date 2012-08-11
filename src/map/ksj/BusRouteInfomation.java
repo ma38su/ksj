@@ -17,7 +17,7 @@ public class BusRouteInfomation implements Data, Serializable {
 	 * 事業者名
 	 */
 	private String operationCommunity;
-	
+
 	/**
 	 * バス系統
 	 */

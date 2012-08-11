@@ -447,7 +447,7 @@ public class KsjDataManager {
 				HandlerN03 handler = new HandlerN03();
 				parser.parse(file, handler);
 				
-				ret = handler.getAdministrativeAreaList();
+				ret = handler.getAdministrativeAreas();
 
 				writeSerializable(name, ret);
 				
@@ -477,7 +477,7 @@ public class KsjDataManager {
 				HandlerN07 handler = new HandlerN07();
 				parser.parse(file, handler);
 				
-				ret = handler.getBusRouteArray();
+				ret = handler.getBusRoutes();
 
 				writeSerializable(name, ret);
 				
