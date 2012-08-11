@@ -194,7 +194,7 @@ public class KsjHandler extends DefaultHandler {
 				for (int i = 0; i + 1 < param.length; i += 2) {
 					int lat = FixedPoint.parseFixedPoint(param[i]);
 					int lng = FixedPoint.parseFixedPoint(param[i + 1]);
-					points.add(new Point(lat, lng));
+					points.add(new Point(lng, lat));
 				}
 				data.link(tag, points.toArray(new Point[]{}));
 			} else if ("gml:pos".equals(tag)) {
@@ -203,7 +203,7 @@ public class KsjHandler extends DefaultHandler {
 				assert(param.length == 2);
 				int lat = FixedPoint.parseFixedPoint(param[0]);
 				int lng = FixedPoint.parseFixedPoint(param[1]);
-				data.link(tag, new Point(lat, lng));
+				data.link(tag, new Point(lng, lat));
 			} else if (data != null) {
 				data.link(tag, this.buf.toString());
 			}

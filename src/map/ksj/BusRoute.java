@@ -8,20 +8,24 @@ import java.io.Serializable;
  */
 public class BusRoute implements Data, Serializable {
 
+	public BusRoute() {
+		this.info = new BusRouteInfo();
+	}
+	
+	public BusRoute(GmlCurve curve, BusRouteInfo info) {
+		this.curve = curve;
+		this.info = info;
+	}
+	
 	/**
 	 * 路線
 	 */
 	private GmlCurve curve;
 
 	/**
-	 * バス区分
+	 * バス路線情報のクラス
 	 */
-	private int type;
-	
-	/**
-	 * 事業者名
-	 */
-	private String operationCommunity;
+	private BusRouteInfo info;
 	
 	/**
 	 * 平日運行頻度
@@ -45,24 +49,25 @@ public class BusRoute implements Data, Serializable {
 	private String line;
 	
 	/**
-	 * @return バス区分コード
+	 * @return バス路線情報のクラス
 	 */
-	public int getType() {
-		return this.type;
-	}
-
-	/**
-	 * @return 事業者名
-	 */
-	public String getOperationCommunity() {
-		return this.operationCommunity;
+	public BusRouteInfo getInfo() {
+		return this.info;
 	}
 	
+	public void setInfo(BusRouteInfo info) {
+		this.info = info;
+	}
+
 	/**
 	 * @return 路線
 	 */
 	public GmlCurve getCurve() {
 		return this.curve;
+	}
+	
+	public void setCurve(GmlCurve curve) {
+		this.curve = curve;
 	}
 
 	/**
@@ -102,11 +107,12 @@ public class BusRoute implements Data, Serializable {
 		} else if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:bsc".equals(tag)) {
-				this.type = Integer.parseInt(string);
+				int type = Integer.parseInt(string);
+				this.info.setType(type);
 			} else if ("ksj:boc".equals(tag)) {
-				this.operationCommunity = string;
+				this.info.setOperationCommunity(string);
 			} else if ("ksj:bln".equals(tag)) {
-				this.line = string;
+				this.info.setLine(string);
 			} else if ("ksj:rpd".equals(tag)) {
 				this.ratePerDay = Double.parseDouble(string);
 			} else if ("ksj:rps".equals(tag)) {

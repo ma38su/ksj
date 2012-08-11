@@ -1,6 +1,5 @@
 package map.ksj;
 
-import java.awt.Point;
 import java.io.Serializable;
 import java.util.Arrays;
 
@@ -10,47 +9,53 @@ import java.util.Arrays;
  */
 public class GmlPolygon implements Data, Serializable {
 	
-	private Point[] points;
-	
-	public Point[] getPoints() {
-		return this.points;
-	}
-	
+	private int n;
+	private int[] x;
+	private int[] y;
+
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlCurve) {
-			this.points = ((GmlCurve) obj).getPoints();
+			GmlCurve curve = (GmlCurve) obj;
+			this.x = curve.getArrayX();
+			this.y = curve.getArrayY();
+			this.n = curve.getArrayLength();
 		}
 	}
-
+	
 	@Override
 	public boolean equals(Object obj) {
 		boolean ret = false;
 		if (obj instanceof GmlPolygon) {
 			GmlPolygon curve = (GmlPolygon) obj;
-			ret = Arrays.equals(this.points, curve.points) || Arrays.equals(this.points, curve.reversePoints());
+			ret = (Arrays.equals(this.x, curve.x) && Arrays.equals(this.y, curve.y)) ||
+					(Arrays.equals(this.x, reverseArray(curve.x)) && Arrays.equals(this.y, reverseArray(curve.y)));
 		}
 		return ret;
 	}
 	
-	private Point[] reversePoints() {
-		Point[] ret = new Point[this.points.length];
+	private static int[] reverseArray(int[] ary) {
+		int[] ret = new int[ary.length];
 		for (int i = 0; i < ret.length; i++) {
-			ret[i] = this.points[ret.length - i - 1];
+			ret[i] = ary[ret.length - i - 1];
 		}
 		return ret;
 	}
 
 	@Override
 	public String toString() {
-		return "points: "+ Arrays.toString(this.points);
+		StringBuilder sb = new StringBuilder("pts: ");
+		for (int i = 0; i < this.n; i++) {
+			sb.append('[');
+			sb.append(this.x[i]);
+			sb.append(", ");
+			sb.append(this.y[i]);
+			sb.append("], ");
+		}
+		return "points: "+ sb.toString();
 	}
 
 	@Override
 	public int hashCode() {
-		int hashCode = 0;
-		for (Point p : this.points) {
-			hashCode += p.hashCode();
-		}
-		return hashCode;
+		return this.x[0] + this.y[0] + this.x[this.n - 1] + this.y[this.n - 1];
 	}
 }

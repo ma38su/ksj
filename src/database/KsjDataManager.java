@@ -30,9 +30,11 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import map.ksj.AdministrativeArea;
+import map.ksj.BusCollections;
 import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
+import map.ksj.GmlCurve;
 import map.ksj.RailroadSection;
 import map.ksj.RailwayCollections;
 import map.ksj.Station;
@@ -46,6 +48,28 @@ import map.ksj.handler.HandlerP11;
  * @author ma38su
  */
 public class KsjDataManager {
+
+
+	/**
+	 * 鉄道(線)のコード
+	 */
+	private static final int TYPE_RAILWAY = 2;
+	
+	/**
+	 * 行政界(面)のコード
+	 */
+	private static final int TYPE_ADMINISTRATIVEAREA = 3;
+
+	/**
+	 * バスルート(線)のコード
+	 */
+	private static final int TYPE_BUS_ROUTE = 7;
+
+	/**
+	 * バス停留所(点)のコード
+	 */
+	private static final int TYPE_BUS_STOP = 11;
+
 	
 	/**
 	 * ファイルの文字コード
@@ -60,7 +84,11 @@ public class KsjDataManager {
 	/**
 	 * バス停のルート情報のファイル名
 	 */
-	private static final String CSV_BUS_ROUTE_INFO = "bus" +File.separatorChar+ "bus_route_info.csv";
+	private static final String CSV_BUS_ROUTE_INFO_FORMAT = "bus" +File.separatorChar+ "bus_route_info_%02d.csv";
+
+	private static final String CSV_BUS_ROUTE_FORMAT = "bus" +File.separatorChar+ "bus_route_%02d.csv";
+
+	private static final String CSV_BUS_ROUTE_CURVE_FORMAT = "bus" +File.separatorChar+ "bus_route_curve_%02d.csv";
 
 	private static final String[] KSJ_URL_FORMAT_LIST = {
 		null, // 0
@@ -410,23 +438,6 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private static final int TYPE_RAILWAY = 2;
-	
-	/**
-	 * 行政界(面)のコード
-	 */
-	private static final int TYPE_ADMINISTRATIVEAREA = 3;
-
-	/**
-	 * バスルート(線)のコード
-	 */
-	private static final int TYPE_BUS_ROUTE = 7;
-
-	/**
-	 * バス停留所(点)のコード
-	 */
-	private static final int TYPE_BUS_STOP = 11;
-
 	/**
 	 * @param code 都道府県コード
 	 * @return 行政界(面)のデータ配列
@@ -440,7 +451,7 @@ public class KsjDataManager {
 			this.getKsjFile(TYPE_RAILWAY);
 			try {
 				SAXParser parser = factory.newSAXParser();
-				File file = new File(".data/N02-11.xml");
+				File file = new File(this.orgDir +File.separatorChar+ "N02-11.xml");
 				HandlerN02 handler = new HandlerN02();
 				parser.parse(file, handler);
 				
@@ -490,11 +501,176 @@ public class KsjDataManager {
 		return ret;
 	}
 
+	private BusCollections readBusCollectionsCsv(int code) {
+		BusCollections ret = null;
+		try {
+			long t0 = System.currentTimeMillis();
+
+			List<GmlCurve> curves = readCurveCSV(code);
+			if (curves.isEmpty()) return ret;
+
+			List<BusRouteInfo> infos = readBusRouteInfoCSV(code);
+			if (infos.isEmpty()) return ret;
+			
+			BusRoute[] routes = readBusRouteCSV(code, curves, infos);
+			if (routes == null) return ret;
+
+			BusStop[] stops = readBusStopCSV(code, infos);
+			if (stops == null) return ret;
+			
+			ret = new BusCollections(code, stops, routes);
+
+			System.out.printf("BUS   : %dms\n", (System.currentTimeMillis() - t0));
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+
+
+	private BusStop[] readBusStopCSV(int code, List<BusRouteInfo> infos)
+			throws IOException {
+		BusStop[] ret = null;
+		File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code));
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				List<BusStop> tmpStops = new ArrayList<BusStop>();
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					String name = param[0];
+					int lat = FixedPoint.parseFixedPoint(param[1]);
+					int lng = FixedPoint.parseFixedPoint(param[2]);
+					BusRouteInfo[] a = new BusRouteInfo[param.length - 3];
+					for (int i = 3; i < param.length; i++) {
+						int idx = Integer.parseInt(param[i]);
+						a[i - 3] = infos.get(idx);
+					}
+					BusStop stop = new BusStop(name, lng, lat, a);
+					tmpStops.add(stop);
+				}
+				ret = tmpStops.toArray(new BusStop[]{});
+			} finally {
+				in.close();
+			}
+		}
+		return ret;
+	}
+
+
+	private BusRoute[] readBusRouteCSV(int code, List<GmlCurve> curves, List<BusRouteInfo> infos)
+			throws IOException {
+		BusRoute[] routes = null;
+		File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_FORMAT, code));
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				List<BusRoute> tmpRoutes = new ArrayList<BusRoute>();
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					int curveIdx = Integer.parseInt(param[0]);
+					GmlCurve curve = curves.get(curveIdx);
+
+					int infoIdx = Integer.parseInt(param[1]);
+					BusRouteInfo info = infos.get(infoIdx);
+					
+					BusRoute route = new BusRoute(curve, info);
+					tmpRoutes.add(route);
+				}
+				routes = tmpRoutes.toArray(new BusRoute[]{});
+			} finally {
+				in.close();
+			}
+		}
+		return routes;
+	}
+
+	private List<BusRouteInfo> readBusRouteInfoCSV(int code) throws IOException {
+		List<BusRouteInfo> infos = new ArrayList<BusRouteInfo>();
+		File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_INFO_FORMAT, code));
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					int type = Integer.parseInt(param[0]);
+					String ln = param[1];
+					String opc = param[2];
+					infos.add(new BusRouteInfo(type, ln, opc));
+				}
+			} finally {
+				in.close();
+			}
+		}
+		return infos;
+	}
+
+
+	private List<GmlCurve> readCurveCSV(int code) throws IOException {
+		List<GmlCurve> ret = new ArrayList<GmlCurve>();
+		File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code));
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					int size = Integer.parseInt(param[0]);
+					Point[] points = new Point[size];
+					for (int i = 0; i < size; i++) {
+						int lat = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
+						int lng = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
+						points[i] = new Point(lng, lat);
+					}
+					ret.add(new GmlCurve(points));
+				}
+			} finally {
+				in.close();
+			}
+		}
+		return ret;
+	}
+	
 	/**
 	 * @param code 都道府県コード
 	 * @return バスルート(線)のデータ配列
 	 */
-	public BusRoute[] getBusRoutes(int code) {
+	private BusStop[] getBusStops(int code) {
+		long t0 = System.currentTimeMillis();
+
+		String name = String.format("P11-%02d.obj", code);
+		BusStop[] ret = this.readSerializable(name, BusStop[].class);
+		if (ret == null) {
+			this.getKsjFile(TYPE_BUS_STOP, code);
+			try {
+				SAXParser parser = this.factory.newSAXParser();
+				File file = new File(this.orgDir +File.separatorChar+ String.format("%02d" +File.separatorChar+ "P11-10_%02d-jgd-g.xml", code, code));
+				HandlerP11 handler = new HandlerP11();
+				parser.parse(file, handler);
+				
+				ret = handler.getBusStopArray();
+
+				writeSerializable(name, ret);
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		System.out.printf("P11 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
+
+		return ret;
+	}
+
+	/**
+	 * @param code 都道府県コード
+	 * @return バスルート(線)のデータ配列
+	 */
+	private BusRoute[] getBusRoutes(int code) {
 		long t0 = System.currentTimeMillis();
 
 		String name = String.format("N07-%02d.obj", code);
@@ -503,7 +679,7 @@ public class KsjDataManager {
 			this.getKsjFile(TYPE_BUS_ROUTE, code);
 			try {
 				SAXParser parser = this.factory.newSAXParser();
-				File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N07-11_%02d.xml", code, code));
+				File file = new File(this.orgDir +File.separatorChar+ String.format("%02d" +File.separatorChar+ "N07-11_%02d.xml", code, code));
 				HandlerN07 handler = new HandlerN07();
 				parser.parse(file, handler);
 				
@@ -521,33 +697,32 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private void writeBusStopsToCsv(BusStop[][] ret) {
-		
-		List<BusRouteInfo> list = new ArrayList<BusRouteInfo>();
-		Map<BusRouteInfo, Integer> map = new HashMap<BusRouteInfo, Integer>();
+	private void writeBusStopCsv(BusCollections data,
+			Map<BusRouteInfo, Integer> infoMap, List<BusRouteInfo> infoList) {
 
-		try {
-			for (int code = 1; code <= 47; code++) {
-				File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code));
+		int code = data.getCode();
+		BusStop[] stops = data.getBusStops();
+		{	// Bus Stop
+			String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code);
+			File file = new File(path + ".tmp");
+			try {
 				if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
 					throw new IllegalStateException();
 				}
 				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
 				try {
-					BusStop[] stops = ret[code - 1];
 					for (BusStop stop : stops) {
-						Point p = stop.getPoint();
-						out.write(String.format("%s,%f,%f", stop.getName(), p.x / 3600000.0, p.y / 3600000.0));
+						out.write(String.format("%s,%f,%f", stop.getName(), FixedPoint.parseDouble(stop.getX()), FixedPoint.parseDouble(stop.getY())));
 						BusRouteInfo[] infos = stop.getBusRouteInfos();
 						for (int i = 0; i < infos.length; i++) {
 							BusRouteInfo info = infos[i];
-							Integer idx = map.get(info);
+							Integer idx = infoMap.get(info);
 							if (idx == null) {
-								idx = list.size();
-								map.put(info, idx);
-								list.add(info);
+								idx = infoList.size();
+								infoMap.put(info, idx);
+								infoList.add(info);
 							} else {
-								infos[i] = list.get(idx);
+								infos[i] = infoList.get(idx);
 							}
 							out.write(String.format(",%d", idx));
 						}
@@ -557,92 +732,184 @@ public class KsjDataManager {
 				} finally {
 					out.close();
 				}
+				if (!file.renameTo(new File(path))) {
+					throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				if (file.isFile() && !file.delete()) {
+					throw new IllegalStateException("Failure of delete: "+ file);
+				}
+				return;
 			}
-			File file = new File(this.csvDir +File.separatorChar + CSV_BUS_ROUTE_INFO);
+		}
+	}
+	
+	private void writeBusRouteCsv(BusCollections collection,
+			Map<BusRouteInfo, Integer> infoMap, List<BusRouteInfo> infoList,
+			Map<GmlCurve, Integer> curveMap, List<GmlCurve> curveList) {
+
+		int code = collection.getCode();
+		BusRoute[] routes = collection.getBusRoute();
+		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_FORMAT, code);
+		File file = new File(path + ".tmp");
+		try {
 			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
 				throw new IllegalStateException();
 			}
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
 			try {
-				for (BusRouteInfo info : list) {
+				for (BusRoute route : routes) {
+					GmlCurve curve = route.getCurve();
+					Integer curveIdx = curveMap.get(curve);
+					if (curveIdx == null) {
+						curveIdx = curveList.size();
+						curveList.add(curve);
+						curveMap.put(curve, curveIdx);
+						assert(curveIdx != null);
+						assert(curve.equals(curveList.get(curveIdx)));
+						assert(curve.equals(curveList.get(curveMap.get(curve))));
+					} else {
+						curve = curveList.get(curveIdx);
+						route.setCurve(curve);
+						assert(curveIdx != null);
+						assert(curve.equals(curveList.get(curveIdx)));
+						assert(curve.equals(curveList.get(curveMap.get(curve))));
+					}
+
+					BusRouteInfo info = route.getInfo();
+					Integer infoIdx = infoMap.get(info);
+					if (infoIdx == null) {
+						infoIdx = infoList.size();
+						infoMap.put(info, infoIdx);
+						infoList.add(info);
+					} else {
+						info = infoList.get(infoIdx);
+						route.setInfo(info);
+					}
+
+					out.write(String.format("%d,%d,%f,%f,%f",
+							curveIdx, infoIdx, 
+							route.getRateParDay(), route.getRatePerSaturday(), route.getRatePerHoliday()));
+					out.newLine();
+					out.flush();
+				}
+			} finally {
+				out.close();
+			}
+			if (!file.renameTo(new File(path))) {
+				throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			if (file.isFile() && !file.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ file);
+			}
+			return;
+		}
+	}
+
+	private void writeBusRouteInfoCsv(BusCollections collection, List<BusRouteInfo> infoList) {
+		int code = collection.getCode();
+		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_INFO_FORMAT, code);
+		File file = new File(path + ".csv");
+		try {
+			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
+			}
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+			try {
+				for (BusRouteInfo info : infoList) {
 					out.write(String.format("%d,%s,%s\n", info.getType(), info.getLine(), info.getOperationCommunity()));
 				}
 			} finally {
 				out.close();
 			}
+			if (!file.renameTo(new File(path))) {
+				throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
+			if (file.isFile() && !file.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ file);
+			}
+			return;
 		}
 	}
 	
-	public BusStop[][] readBusStopsCsv() {
-		long t0 = System.currentTimeMillis();
-
-		BusStop[][] ret = new BusStop[47][];
+	private void writeCurveCsv(BusCollections data, List<GmlCurve> curveList) {
+		int code = data.getCode();
+		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code);
+		File file = new File(path + ".tmp");
 		try {
-			List<BusRouteInfo> infos = new ArrayList<BusRouteInfo>();
-			{
-				File file = new File(this.csvDir +File.separatorChar + CSV_BUS_ROUTE_INFO);
-				if (file.isFile()) {
-					BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
-					try {
-						String line;
-						while ((line = in.readLine()) != null) {
-							String[] param = line.split(",");
-							int type = Integer.parseInt(param[0]);
-							String ln = param[1];
-							String opc = param[2];
-							infos.add(new BusRouteInfo(type, ln, opc));
-						}
-					} finally {
-						in.close();
-					}
-				}
+			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
 			}
-			for (int code = 1; code <= 47; code++) {
-				File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code));
-				if (file.isFile()) {
-					BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
-					try {
-						String line;
-						List<BusStop> stops = new ArrayList<BusStop>();
-						while ((line = in.readLine()) != null) {
-							String[] param = line.split(",");
-							String name = param[0];
-							int lat = FixedPoint.parseFixedPoint(param[1]);
-							int lng = FixedPoint.parseFixedPoint(param[2]);
-							BusRouteInfo[] a = new BusRouteInfo[param.length - 3];
-							for (int i = 3; i < param.length; i++) {
-								int idx = Integer.parseInt(param[i]);
-								a[i - 3] = infos.get(idx);
-							}
-							BusStop stop = new BusStop(name, new Point(lat, lng), a);
-							stops.add(stop);
-						}
-						ret[code - 1] = stops.toArray(new BusStop[]{});
-					} finally {
-						in.close();
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+			try {
+				for (GmlCurve curve : curveList) {
+					int n = curve.getArrayLength();
+					int[] x = curve.getArrayX();
+					int[] y = curve.getArrayY();
+					StringBuilder sb = new StringBuilder();
+					sb.append(n);
+					out.write(Integer.toString(n));
+					for (int i = 0; i < n; i++) {
+						sb.append(',');
+						sb.append(FixedPoint.parseDouble(x[i]));
+						sb.append(',');
+						sb.append(FixedPoint.parseDouble(y[i]));
+						out.write(String.format(",%f,%f", FixedPoint.parseDouble(x[i]), FixedPoint.parseDouble(y[i])));
 					}
+					assert(sb.toString().split(",").length % 2 == 1);
+					out.newLine();
+					out.flush();
 				}
+			} finally {
+				out.close();
+			}
+			if (!file.renameTo(new File(path))) {
+				throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+			if (file.isFile() && file.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ file);
+			}
+			return;
 		}
-		System.out.printf("P11   : %dms\n", (System.currentTimeMillis() - t0));
-		return ret;
 	}
 
-	public BusStop[][] getBusStops() {
-		BusStop[][] ret = readBusStopsCsv();
-		boolean flag = false;
+	private void writeBusCollectionsCsv(BusCollections collection) {
+
+		List<BusRouteInfo> infoList = new ArrayList<BusRouteInfo>();
+		Map<BusRouteInfo, Integer> infoMap = new HashMap<BusRouteInfo, Integer>();
+
+		List<GmlCurve> curveList = new ArrayList<GmlCurve>();
+		Map<GmlCurve, Integer> curveMap = new HashMap<GmlCurve, Integer>();
+
+		// 1 Bus Stop
+		writeBusStopCsv(collection, infoMap, infoList);
+		
+		// 2 Bus Route
+		writeBusRouteCsv(collection, infoMap, infoList, curveMap, curveList);
+
+		// 3 Bus Route Info
+		writeBusRouteInfoCsv(collection, infoList);
+		
+		// 4 GML Curve
+		writeCurveCsv(collection, curveList);
+
+	}
+	
+	public BusCollections[] getBusCollections() {
+		BusCollections[] ret = new BusCollections[47];
 		for (int i = 1; i <= 47; i++) {
+			ret[i - 1] = this.readBusCollectionsCsv(i);
 			if (ret[i - 1] == null) {
-				ret[i - 1] = getBusStops(i);
-				flag = true;
+				ret[i - 1] = getBusCollections(i);
+				this.writeBusCollectionsCsv(ret[i - 1]);
 			}
-		}
-		if (flag) {
-			writeBusStopsToCsv(ret);
 		}
 		return ret;
 	}
@@ -651,31 +918,15 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return バス停(線)のデータ配列
 	 */
-	public BusStop[] getBusStops(int code) {
+	private BusCollections getBusCollections(int code) {
 		long t0 = System.currentTimeMillis();
-
-		String name = String.format("P11-%02d.obj", code);
-		BusStop[] ret = this.readSerializable(name, BusStop[].class);
-		if (ret == null) {
-			this.getKsjFile(TYPE_BUS_STOP, code);
-			try {
-				SAXParser parser = factory.newSAXParser();
-				File file = new File(".data" +File.separatorChar+ String.format("%02d" +File.separatorChar+ "P11-10_%02d-jgd-g.xml", code, code));
-				HandlerP11 handler = new HandlerP11();
-				parser.parse(file, handler);
-				
-				ret = handler.getBusStopArray();
-				
-				writeSerializable(name, ret);
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
 		
+		BusStop[] stops = getBusStops(code);
+		BusRoute[] routes = getBusRoutes(code);
+
 		System.out.printf("P11-%02d: %dms\n", code, (System.currentTimeMillis() - t0));
 		
-		return ret;
+		return new BusCollections(code, stops, routes);
 	}
 	
 	/**

@@ -40,7 +40,7 @@ public class BusRouteInfo implements Data, Serializable {
 	public int getID() {
 		return this.id;
 	}
-	
+
 	/**
 	 * @return バス区分
 	 */
@@ -49,6 +49,13 @@ public class BusRouteInfo implements Data, Serializable {
 	}
 	
 	/**
+	 * @return バス系統
+	 */
+	public String getLine() {
+		return this.line;
+	}
+
+	/**
 	 * @return 事業者名
 	 */
 	public String getOperationCommunity() {
@@ -56,10 +63,24 @@ public class BusRouteInfo implements Data, Serializable {
 	}
 	
 	/**
-	 * @return バス系統
+	 * @param type バス区分
 	 */
-	public String getLine() {
-		return this.line;
+	public void setType(int type) {
+		this.type = type;
+	}
+	
+	/**
+	 * @param line バス系統
+	 */
+	public void setLine(String line) {
+		this.line = line;
+	}
+	
+	/**
+	 * @param operationCommunity 事業者名
+	 */
+	public void setOperationCommunity(String operationCommunity) {
+		this.operationCommunity = operationCommunity;
 	}
 	
 	@Override

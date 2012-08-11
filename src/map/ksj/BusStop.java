@@ -1,6 +1,5 @@
 package map.ksj;
 
-import java.awt.Point;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,9 +14,10 @@ public class BusStop implements Data, Serializable {
 		this.infos = new BusRouteInfo[0];
 	}
 
-	public BusStop(String name, Point point, BusRouteInfo[] infos) {
+	public BusStop(String name, int x, int y, BusRouteInfo[] infos) {
 		this.name = name;
-		this.point = point;
+		this.x = x;
+		this.y = y;
 		this.infos = infos;
 	}
 	
@@ -33,9 +33,14 @@ public class BusStop implements Data, Serializable {
 	private	BusRouteInfo[] infos;
 
 	/**
-	 * 地点
+	 * 地点(X座標)
 	 */
-	private Point point;
+	private int x;
+
+	/**
+	 * 地点(Y座標)
+	 */
+	private int y;
 
 	/**
 	 * バス停名
@@ -50,10 +55,17 @@ public class BusStop implements Data, Serializable {
 	}
 
 	/**
-	 * @return 地点
+	 * @return 地点(X座標)
 	 */
-	public Point getPoint() {
-		return this.point;
+	public int getX() {
+		return this.x;
+	}
+	
+	/**
+	 * @return 地点(X座標)
+	 */
+	public int getY() {
+		return this.y;
 	}
 	
 	/**
@@ -66,7 +78,9 @@ public class BusStop implements Data, Serializable {
 	@Override
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlPoint) {
-			this.point = ((GmlPoint) obj).getPoint();
+			GmlPoint p = (GmlPoint) obj;
+			this.x = p.getX();
+			this.y = p.getY();
 		} else if (obj instanceof BusRouteInfo) {
 			this.addRouteInfo((BusRouteInfo) obj);
 		} else if (obj instanceof String) {

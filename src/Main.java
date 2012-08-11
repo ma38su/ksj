@@ -2,7 +2,6 @@
 
 import java.io.File;
 
-import map.ksj.BusStop;
 import database.KsjDataManager;
 
 public class Main {
@@ -14,15 +13,13 @@ public class Main {
 				".data"+File.separatorChar+"serialize"
 		);
 
-		BusStop[][] stops = mgr.getBusStops();
+		mgr.getBusCollections();
 
 		for (int code = 1; code <= 47; ++code) {
 			
 			// N03
 			// mgr.getAdministrativeAreaArray(code);
 
-			// N07
-			// mgr.getBusRouteArray(code);
 
 			// P11
 			// BusStop[] stops = mgr.getBusStops(code);

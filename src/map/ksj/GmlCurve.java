@@ -12,7 +12,35 @@ import java.util.List;
  */
 public class GmlCurve implements Data, Serializable {
 	
-	private Point[] points;
+	private int n;
+	private int[] x;
+	private int[] y;
+	
+	public GmlCurve() {
+	}
+
+	public GmlCurve(Point[] points) {
+		assert(points.length > 0);
+		this.n = points.length;
+		this.x = new int[this.n];
+		this.y = new int[this.n];
+		for (int i = 0; i < this.n; i++) {
+			this.x[i] = points[i].x;
+			this.y[i] = points[i].y;
+		}
+	}
+
+	public int[] getArrayX() {
+		return this.x;
+	}
+	
+	public int[] getArrayY() {
+		return this.y;
+	}
+	
+	public int getArrayLength() {
+		return this.n;
+	}
 	
 	public List<Integer> links = new ArrayList<Integer>();
 	
@@ -28,21 +56,25 @@ public class GmlCurve implements Data, Serializable {
 		return ret;
 	}
 	
-	public Point[] getPoints() {
-		return this.points;
-	}
-	
 	public Point getFirstPoint() {
-		return this.points[0];
+		return new Point(this.x[0], this.y[0]);
 	}
 	
 	public Point getLastPoint() {
-		return this.points[this.points.length - 1];
+		return new Point(this.x[this.x.length - 1], this.y[this.y.length]);
 	}
 	
 	public void link(String tag, Object obj) {
 		if (obj instanceof Point[]) {
-			this.points = (Point[]) obj;
+			Point[] points = (Point[]) obj;
+			assert(points.length > 0);
+			this.n = points.length;
+			this.x = new int[points.length];
+			this.y = new int[points.length];
+			for (int i = 0; i < this.n; i++) {
+				this.x[i] = points[i].x;
+				this.y[i] = points[i].y;
+			}
 		}
 	}
 
@@ -51,30 +83,35 @@ public class GmlCurve implements Data, Serializable {
 		boolean ret = false;
 		if (obj instanceof GmlCurve) {
 			GmlCurve curve = (GmlCurve) obj;
-			ret = Arrays.equals(this.points, curve.points) || Arrays.equals(this.points, curve.reversePoints());
+			ret = (Arrays.equals(this.x, curve.x) && Arrays.equals(this.y, curve.y)) ||
+					(Arrays.equals(this.x, reverseArray(curve.x)) && Arrays.equals(this.y, reverseArray(curve.y)));
 		}
 		return ret;
 	}
 	
-	private Point[] reversePoints() {
-		Point[] ret = new Point[this.points.length];
+	private static int[] reverseArray(int[] ary) {
+		int[] ret = new int[ary.length];
 		for (int i = 0; i < ret.length; i++) {
-			ret[i] = this.points[ret.length - i - 1];
+			ret[i] = ary[ret.length - i - 1];
 		}
 		return ret;
 	}
 
 	@Override
 	public String toString() {
-		return "points: "+ Arrays.toString(this.points);
+		StringBuilder sb = new StringBuilder("pts: ");
+		for (int i = 0; i < this.n; i++) {
+			sb.append('[');
+			sb.append(this.x[i]);
+			sb.append(", ");
+			sb.append(this.y[i]);
+			sb.append("], ");
+		}
+		return "points: "+ sb.toString();
 	}
 
 	@Override
 	public int hashCode() {
-		int hashCode = 0;
-		for (Point p : this.points) {
-			hashCode += p.hashCode();
-		}
-		return hashCode;
+		return this.x[0] + this.y[0] + this.x[this.n - 1] + this.y[this.n - 1];
 	}
 }

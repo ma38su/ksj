@@ -2,17 +2,30 @@ package map.ksj;
 
 import java.awt.Point;
 
+import database.FixedPoint;
+
+/**
+ * 点型
+ * @author fujiwara
+ */
 public class GmlPoint implements Data {
 	
-	private Point point;
+	private int x;
+	private int y;
 	
-	public Point getPoint() {
-		return this.point;
+	public int getX() {
+		return this.x;
+	}
+	
+	public int getY() {
+		return this.y;
 	}
 	
 	public void link(String tag, Object obj) {
 		if (obj instanceof Point) {
-			this.point = (Point) obj;
+			Point point = (Point) obj;
+			this.x = point.x;
+			this.y = point.y;
 		}
 	}
 
@@ -21,18 +34,18 @@ public class GmlPoint implements Data {
 		boolean ret = false;
 		if (obj instanceof GmlPoint) {
 			GmlPoint p = (GmlPoint) obj;
-			ret = this.point.equals(p.point);
+			ret = this.x == p.x && this.y == p.y;
 		}
 		return ret;
 	}
 	
 	@Override
 	public String toString() {
-		return "point: "+ this.point;
+		return String.format("pt: %f,%f", FixedPoint.parseDouble(this.x), FixedPoint.parseDouble(this.y));
 	}
 
 	@Override
 	public int hashCode() {
-		return this.point.hashCode();
+		return this.x + this.y;
 	}
 }
