@@ -1,21 +1,28 @@
 package database;
 
+import java.awt.Point;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.channels.IllegalSelectorException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -24,6 +31,7 @@ import javax.xml.parsers.SAXParserFactory;
 
 import map.ksj.AdministrativeArea;
 import map.ksj.BusRoute;
+import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.RailroadSection;
 import map.ksj.RailwayCollections;
@@ -38,6 +46,21 @@ import map.ksj.handler.HandlerP11;
  * @author ma38su
  */
 public class KsjDataManager {
+	
+	/**
+	 * ファイルの文字コード
+	 */
+	private static final String CHARSET = "MS932";
+
+	/**
+	 * バス停のファイル名
+	 */
+	private static final String CSV_BUS_STOP_FORMAT = "bus" +File.separatorChar+ "bus_stop_%02d.csv";
+
+	/**
+	 * バス停のルート情報のファイル名
+	 */
+	private static final String CSV_BUS_ROUTE_INFO = "bus" +File.separatorChar+ "bus_route_info.csv";
 
 	private static final String[] KSJ_URL_FORMAT_LIST = {
 		null, // 0
@@ -74,21 +97,28 @@ public class KsjDataManager {
 	private final SAXParserFactory factory;
 
 	/**
-	 * 保存フォルダ
+	 * オリジナルファイルの保存フォルダ
 	 */
-	private final String baseDir;
+	private final String orgDir;
 
 	/**
-	 * シリアライズデータの保存ディレクトリ
+	 * CSVファイルの保存ディレクトリ
+	 */
+	private String csvDir;
+
+	/**
+	 * シリアライズファイルの保存ディレクトリ
 	 */
 	private String serializeDir;
 
 	/**
-	 * @param baseDir データ格納ディレクトリ
-	 * @param serializeDir シリアライズデータの格納ディレクトリ
+	 * @param orgDir オリジナルファイルの格納ディレクトリ
+	 * @param csvDir CSVファイルの格納ディレクトリ
+	 * @param serializeDir シリアライズファイルの格納ディレクトリ
 	 */
-	public KsjDataManager(String baseDir, String serializeDir) {
-		this.baseDir = baseDir;
+	public KsjDataManager(String orgDir, String csvDir, String serializeDir) {
+		this.orgDir = orgDir;
+		this.csvDir = csvDir;
 		this.serializeDir = serializeDir;
 		this.factory = SAXParserFactory.newInstance();
 	}
@@ -203,7 +233,7 @@ public class KsjDataManager {
 	}
 
 	private File getFile(int type, int code) {
-		return new File(this.baseDir +File.separatorChar+ String.format("%02d" +File.separatorChar+ KSJ_TYPE_FORMAT[type] +"-%02d.zip", code, code));
+		return new File(this.orgDir +File.separatorChar+ String.format("%02d" +File.separatorChar+ KSJ_TYPE_FORMAT[type] +"-%02d.zip", code, code));
 	}
 	
 	private static boolean hasExtracted(File dir, FileFilter filter) {
@@ -219,7 +249,7 @@ public class KsjDataManager {
 	}
 	
 	public File[] getKsjFile(final int type) {
-		File zip = new File(this.baseDir +File.separatorChar+ KSJ_TYPE_FORMAT[type] +".zip");
+		File zip = new File(this.orgDir +File.separatorChar+ KSJ_TYPE_FORMAT[type] +".zip");
 		File dir = zip.getParentFile();
 		if (!dir.isDirectory() && !dir.mkdirs()) {
 			throw new IllegalStateException();
@@ -425,7 +455,7 @@ public class KsjDataManager {
 				e.printStackTrace();
 			}
 		}
-		System.out.printf("N02 %d: %dms\n", 2, (System.currentTimeMillis() - t0));
+		System.out.printf("N02 %02d: %dms\n", 2, (System.currentTimeMillis() - t0));
 		
 		return ret;
 	}
@@ -434,7 +464,7 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return 行政界(面)のデータ配列
 	 */
-	public AdministrativeArea[] getAdministrativeAreaArray(int code) {
+	public AdministrativeArea[] getAdministrativeAreas(int code) {
 		long t0 = System.currentTimeMillis();
 
 		String name = String.format("N03-%02d.obj", code);
@@ -455,7 +485,7 @@ public class KsjDataManager {
 				e.printStackTrace();
 			}
 		}
-		System.out.printf("N03 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		System.out.printf("N03 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 		
 		return ret;
 	}
@@ -464,7 +494,7 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return バスルート(線)のデータ配列
 	 */
-	public BusRoute[] getBusRouteArray(int code) {
+	public BusRoute[] getBusRoutes(int code) {
 		long t0 = System.currentTimeMillis();
 
 		String name = String.format("N07-%02d.obj", code);
@@ -486,16 +516,142 @@ public class KsjDataManager {
 			}
 		}
 		
-		System.out.printf("N07 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		System.out.printf("N07 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
 		return ret;
 	}
+	
+	private void writeBusStopsToCsv(BusStop[][] ret) {
+		
+		List<BusRouteInfo> list = new ArrayList<BusRouteInfo>();
+		Map<BusRouteInfo, Integer> map = new HashMap<BusRouteInfo, Integer>();
 
+		try {
+			for (int code = 1; code <= 47; code++) {
+				File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code));
+				if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+					throw new IllegalStateException();
+				}
+				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+				try {
+					BusStop[] stops = ret[code - 1];
+					for (BusStop stop : stops) {
+						Point p = stop.getPoint();
+						out.write(String.format("%s,%f,%f", stop.getName(), p.x / 3600000.0, p.y / 3600000.0));
+						BusRouteInfo[] infos = stop.getBusRouteInfos();
+						for (int i = 0; i < infos.length; i++) {
+							BusRouteInfo info = infos[i];
+							Integer idx = map.get(info);
+							if (idx == null) {
+								idx = list.size();
+								map.put(info, idx);
+								list.add(info);
+							} else {
+								infos[i] = list.get(idx);
+							}
+							out.write(String.format(",%d", idx));
+						}
+						out.newLine();
+						out.flush();
+					}
+				} finally {
+					out.close();
+				}
+			}
+			File file = new File(this.csvDir +File.separatorChar + CSV_BUS_ROUTE_INFO);
+			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
+			}
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+			try {
+				for (BusRouteInfo info : list) {
+					out.write(String.format("%d,%s,%s\n", info.getType(), info.getLine(), info.getOperationCommunity()));
+				}
+			} finally {
+				out.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public BusStop[][] readBusStopsCsv() {
+		long t0 = System.currentTimeMillis();
+
+		BusStop[][] ret = new BusStop[47][];
+		try {
+			List<BusRouteInfo> infos = new ArrayList<BusRouteInfo>();
+			{
+				File file = new File(this.csvDir +File.separatorChar + CSV_BUS_ROUTE_INFO);
+				if (file.isFile()) {
+					BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+					try {
+						String line;
+						while ((line = in.readLine()) != null) {
+							String[] param = line.split(",");
+							int type = Integer.parseInt(param[0]);
+							String ln = param[1];
+							String opc = param[2];
+							infos.add(new BusRouteInfo(type, ln, opc));
+						}
+					} finally {
+						in.close();
+					}
+				}
+			}
+			for (int code = 1; code <= 47; code++) {
+				File file = new File(this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code));
+				if (file.isFile()) {
+					BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+					try {
+						String line;
+						List<BusStop> stops = new ArrayList<BusStop>();
+						while ((line = in.readLine()) != null) {
+							String[] param = line.split(",");
+							String name = param[0];
+							int lat = FixedPoint.parseFixedPoint(param[1]);
+							int lng = FixedPoint.parseFixedPoint(param[2]);
+							BusRouteInfo[] a = new BusRouteInfo[param.length - 3];
+							for (int i = 3; i < param.length; i++) {
+								int idx = Integer.parseInt(param[i]);
+								a[i - 3] = infos.get(idx);
+							}
+							BusStop stop = new BusStop(name, new Point(lat, lng), a);
+							stops.add(stop);
+						}
+						ret[code - 1] = stops.toArray(new BusStop[]{});
+					} finally {
+						in.close();
+					}
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.printf("P11   : %dms\n", (System.currentTimeMillis() - t0));
+		return ret;
+	}
+
+	public BusStop[][] getBusStops() {
+		BusStop[][] ret = readBusStopsCsv();
+		boolean flag = false;
+		for (int i = 1; i <= 47; i++) {
+			if (ret[i - 1] == null) {
+				ret[i - 1] = getBusStops(i);
+				flag = true;
+			}
+		}
+		if (flag) {
+			writeBusStopsToCsv(ret);
+		}
+		return ret;
+	}
+	
 	/**
 	 * @param code 都道府県コード
 	 * @return バス停(線)のデータ配列
 	 */
-	public BusStop[] getBusStopArray(int code) {
+	public BusStop[] getBusStops(int code) {
 		long t0 = System.currentTimeMillis();
 
 		String name = String.format("P11-%02d.obj", code);
@@ -517,7 +673,7 @@ public class KsjDataManager {
 			}
 		}
 		
-		System.out.printf("P11 %d: %dms\n", code, (System.currentTimeMillis() - t0));
+		System.out.printf("P11-%02d: %dms\n", code, (System.currentTimeMillis() - t0));
 		
 		return ret;
 	}
@@ -587,7 +743,7 @@ public class KsjDataManager {
 					}
 				}
 			} catch (Exception e) {
-				e.printStackTrace();
+				System.err.println(e.getMessage());
 				ret = null;
 				if (file.isFile() && !file.delete()) {
 					throw new IllegalStateException("Failure of delete: "+ file);

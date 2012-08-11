@@ -11,10 +11,26 @@ import java.util.List;
  */
 public class BusStop implements Data, Serializable {
 
+	public BusStop() {
+		this.infos = new BusRouteInfo[0];
+	}
+
+	public BusStop(String name, Point point, BusRouteInfo[] infos) {
+		this.name = name;
+		this.point = point;
+		this.infos = infos;
+	}
+	
+	public void addRouteInfo(BusRouteInfo info) {
+		List<BusRouteInfo> tmp = new ArrayList<BusRouteInfo>(infos.length + 1);
+		tmp.add(info);
+		infos = tmp.toArray(new BusRouteInfo[tmp.size()]);
+	}
+
 	/**
 	 * バス路線情報
 	 */
-	private	final List<BusRouteInfomation> infos = new ArrayList<BusRouteInfomation>();
+	private	BusRouteInfo[] infos;
 
 	/**
 	 * 地点
@@ -43,7 +59,7 @@ public class BusStop implements Data, Serializable {
 	/**
 	 * @return バス路線情報
 	 */
-	public List<BusRouteInfomation> getBusRouteInfos() {
+	public BusRouteInfo[] getBusRouteInfos() {
 		return this.infos;
 	}
 
@@ -51,8 +67,8 @@ public class BusStop implements Data, Serializable {
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlPoint) {
 			this.point = ((GmlPoint) obj).getPoint();
-		} else if (obj instanceof BusRouteInfomation) {
-			infos.add((BusRouteInfomation) obj);
+		} else if (obj instanceof BusRouteInfo) {
+			this.addRouteInfo((BusRouteInfo) obj);
 		} else if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:busStopName".equals(tag)) {

@@ -11,7 +11,7 @@ import java.util.Set;
 
 import map.ksj.AdministrativeArea;
 import map.ksj.BusRoute;
-import map.ksj.BusRouteInfomation;
+import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.Data;
 import map.ksj.GmlCurve;
@@ -22,6 +22,8 @@ import map.ksj.Station;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
+
+import database.FixedPoint;
 
 public class KsjHandler extends DefaultHandler {
 
@@ -39,7 +41,7 @@ public class KsjHandler extends DefaultHandler {
 		this.classMap.put("gml:Point", GmlPoint.class);
 		this.classMap.put("gml:Surface", GmlPolygon.class);
 		this.classMap.put("ksj:BusStop", BusStop.class);
-		this.classMap.put("ksj:busRouteInformation", BusRouteInfomation.class);
+		this.classMap.put("ksj:busRouteInformation", BusRouteInfo.class);
 		this.classMap.put("ksj:BusRoute", BusRoute.class);
 		this.classMap.put("ksj:RailroadSection", RailroadSection.class);
 		this.classMap.put("ksj:Station", Station.class);
@@ -190,8 +192,8 @@ public class KsjHandler extends DefaultHandler {
 				String[] param = string.split("\\s+");
 				List<Point> points = new ArrayList<Point>();
 				for (int i = 0; i + 1 < param.length; i += 2) {
-					int lat = parseFixInt(param[i]);
-					int lng = parseFixInt(param[i + 1]);
+					int lat = FixedPoint.parseFixedPoint(param[i]);
+					int lng = FixedPoint.parseFixedPoint(param[i + 1]);
 					points.add(new Point(lat, lng));
 				}
 				data.link(tag, points.toArray(new Point[]{}));
@@ -199,39 +201,14 @@ public class KsjHandler extends DefaultHandler {
 				String string = this.buf.toString().replaceFirst("^\\s+", "");
 				String[] param = string.split("\\s+");
 				assert(param.length == 2);
-				int lat = parseFixInt(param[0]);
-				int lng = parseFixInt(param[1]);
+				int lat = FixedPoint.parseFixedPoint(param[0]);
+				int lng = FixedPoint.parseFixedPoint(param[1]);
 				data.link(tag, new Point(lat, lng));
 			} else if (data != null) {
 				data.link(tag, this.buf.toString());
 			}
 			this.buf.setLength(0);
 		}
-	}
-	
-	protected static int parseFixInt(String str) {
-		
-		String[] param = str.split("\\.");
-		int ret = Integer.parseInt(param[0]) * 3600000;
-		if (param.length == 2) {
-			int mul = 3600000;
-			int div = 1;
-			int size = param[1].length() > 5 ? 5 : param[1].length();
-			for (int i = 0; i < size; i++) {
-				mul /= 10;
-			}
-			if (param[1].length() > 5) {
-				for (int i = param[1].length() - 6; i >= 0; i--) {
-					div *= 10;
-				}
-			}
-			ret += Integer.parseInt(param[1]) * mul / div;
-		}
-
-		int val = (int) (Double.parseDouble(str) * 3600000 + 0.5);
-		assert(val + 1 >= ret || val <= ret + 1);
-		
-		return ret;
 	}
 	
 	protected void postProcessing() {
