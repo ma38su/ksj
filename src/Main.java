@@ -30,6 +30,6 @@ public class Main {
 //		}
 
 		// N02
-		mgr.getRailway();
+//		mgr.getRailway();
 	}
 }

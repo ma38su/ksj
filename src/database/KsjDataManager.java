@@ -520,7 +520,7 @@ public class KsjDataManager {
 			
 			ret = new BusCollections(code, stops, routes);
 
-			System.out.printf("BUS   : %dms\n", (System.currentTimeMillis() - t0));
+			System.out.printf("BUS(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -702,46 +702,49 @@ public class KsjDataManager {
 
 		int code = data.getCode();
 		BusStop[] stops = data.getBusStops();
-		{	// Bus Stop
-			String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code);
-			File file = new File(path + ".tmp");
-			try {
-				if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
-					throw new IllegalStateException();
-				}
-				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
-				try {
-					for (BusStop stop : stops) {
-						out.write(String.format("%s,%f,%f", stop.getName(), FixedPoint.parseDouble(stop.getX()), FixedPoint.parseDouble(stop.getY())));
-						BusRouteInfo[] infos = stop.getBusRouteInfos();
-						for (int i = 0; i < infos.length; i++) {
-							BusRouteInfo info = infos[i];
-							Integer idx = infoMap.get(info);
-							if (idx == null) {
-								idx = infoList.size();
-								infoMap.put(info, idx);
-								infoList.add(info);
-							} else {
-								infos[i] = infoList.get(idx);
-							}
-							out.write(String.format(",%d", idx));
-						}
-						out.newLine();
-						out.flush();
-					}
-				} finally {
-					out.close();
-				}
-				if (!file.renameTo(new File(path))) {
-					throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-				if (file.isFile() && !file.delete()) {
-					throw new IllegalStateException("Failure of delete: "+ file);
-				}
-				return;
+
+		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_STOP_FORMAT, code);
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: "+ file);
+		}
+		File tmpFile = new File(path + ".tmp");
+		try {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
 			}
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), CHARSET));
+			try {
+				for (BusStop stop : stops) {
+					out.write(String.format("%s,%f,%f", stop.getName(), FixedPoint.parseDouble(stop.getX()), FixedPoint.parseDouble(stop.getY())));
+					BusRouteInfo[] infos = stop.getBusRouteInfos();
+					for (int i = 0; i < infos.length; i++) {
+						BusRouteInfo info = infos[i];
+						Integer idx = infoMap.get(info);
+						if (idx == null) {
+							idx = infoList.size();
+							infoMap.put(info, idx);
+							infoList.add(info);
+						} else {
+							infos[i] = infoList.get(idx);
+						}
+						out.write(String.format(",%d", idx));
+					}
+					out.newLine();
+					out.flush();
+				}
+			} finally {
+				out.close();
+			}
+			if (!tmpFile.renameTo(file)) {
+				throw new IllegalStateException("Failure of rename: "+ tmpFile + " => "+ file);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			if (tmpFile.isFile() && !tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ tmpFile);
+			}
+			return;
 		}
 	}
 	
@@ -752,12 +755,17 @@ public class KsjDataManager {
 		int code = collection.getCode();
 		BusRoute[] routes = collection.getBusRoute();
 		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_FORMAT, code);
-		File file = new File(path + ".tmp");
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: "+ file);
+		}
+			
+		File tmpFile = new File(path + ".tmp");
 		try {
-			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
 				throw new IllegalStateException();
 			}
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), CHARSET));
 			try {
 				for (BusRoute route : routes) {
 					GmlCurve curve = route.getCurve();
@@ -797,13 +805,13 @@ public class KsjDataManager {
 			} finally {
 				out.close();
 			}
-			if (!file.renameTo(new File(path))) {
-				throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
+			if (!tmpFile.renameTo(new File(path))) {
+				throw new IllegalStateException("Failure of rename: "+ tmpFile + " => "+ path);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			if (file.isFile() && !file.delete()) {
-				throw new IllegalStateException("Failure of delete: "+ file);
+			if (tmpFile.isFile() && !tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ tmpFile);
 			}
 			return;
 		}
@@ -812,12 +820,16 @@ public class KsjDataManager {
 	private void writeBusRouteInfoCsv(BusCollections collection, List<BusRouteInfo> infoList) {
 		int code = collection.getCode();
 		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_INFO_FORMAT, code);
-		File file = new File(path + ".csv");
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: "+ file);
+		}
+		File tmpFile = new File(path + ".csv");
 		try {
-			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
 				throw new IllegalStateException();
 			}
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), CHARSET));
 			try {
 				for (BusRouteInfo info : infoList) {
 					out.write(String.format("%d,%s,%s\n", info.getType(), info.getLine(), info.getOperationCommunity()));
@@ -825,13 +837,13 @@ public class KsjDataManager {
 			} finally {
 				out.close();
 			}
-			if (!file.renameTo(new File(path))) {
-				throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
+			if (!tmpFile.renameTo(new File(path))) {
+				throw new IllegalStateException("Failure of rename: "+ tmpFile + " => "+ path);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			if (file.isFile() && !file.delete()) {
-				throw new IllegalStateException("Failure of delete: "+ file);
+			if (tmpFile.isFile() && !tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ tmpFile);
 			}
 			return;
 		}
@@ -840,13 +852,18 @@ public class KsjDataManager {
 	private void writeCurveCsv(BusCollections data, List<GmlCurve> curveList) {
 		int code = data.getCode();
 		String path = this.csvDir +File.separatorChar + String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code);
-		File file = new File(path + ".tmp");
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: "+ file);
+		}
+		File tmpFile = new File(path + ".tmp");
 		try {
-			if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
 				throw new IllegalStateException();
 			}
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), CHARSET));
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmpFile), CHARSET));
 			try {
+				System.out.println("curve: "+ curveList.size());
 				for (GmlCurve curve : curveList) {
 					int n = curve.getArrayLength();
 					int[] x = curve.getArrayX();
@@ -868,13 +885,13 @@ public class KsjDataManager {
 			} finally {
 				out.close();
 			}
-			if (!file.renameTo(new File(path))) {
-				throw new IllegalStateException("Failure of rename: "+ file + " => "+ path);
+			if (!tmpFile.renameTo(file)) {
+				throw new IllegalStateException("Failure of rename: "+ tmpFile + " => "+ file);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			if (file.isFile() && file.delete()) {
-				throw new IllegalStateException("Failure of delete: "+ file);
+			if (tmpFile.isFile() && tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: "+ tmpFile);
 			}
 			return;
 		}
@@ -924,7 +941,7 @@ public class KsjDataManager {
 		BusStop[] stops = getBusStops(code);
 		BusRoute[] routes = getBusRoutes(code);
 
-		System.out.printf("P11-%02d: %dms\n", code, (System.currentTimeMillis() - t0));
+		System.out.printf("BUS(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 		
 		return new BusCollections(code, stops, routes);
 	}

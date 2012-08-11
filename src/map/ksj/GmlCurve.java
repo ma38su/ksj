@@ -61,7 +61,7 @@ public class GmlCurve implements Data, Serializable {
 	}
 	
 	public Point getLastPoint() {
-		return new Point(this.x[this.x.length - 1], this.y[this.y.length]);
+		return new Point(this.x[this.n - 1], this.y[this.n - 1]);
 	}
 	
 	public void link(String tag, Object obj) {
