@@ -52,7 +52,7 @@ public class KsjHandler extends DefaultHandler {
 		this.charactersTarget.add("ksj:lin");
 		this.charactersTarget.add("ksj:stn");
 		this.charactersTarget.add("ksj:int");
-		this.charactersTarget.add("ksj:rar");
+		this.charactersTarget.add("ksj:rac");
 
 		this.charactersTarget.add("gml:pos");
 		this.charactersTarget.add("ksj:busStopName");

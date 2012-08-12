@@ -38,6 +38,7 @@ import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.GmlCurve;
 import map.ksj.GmlPolygon;
+import map.ksj.RailroadInfo;
 import map.ksj.RailroadSection;
 import map.ksj.RailwayCollection;
 import map.ksj.Station;
@@ -77,6 +78,21 @@ public class KsjDataManager {
 	 * ファイルの文字コード
 	 */
 	private static final String CHARSET = "MS932";
+
+	/**
+	 * 鉄道の駅データのファイル名
+	 */
+	private static final String CSV_RAIL = "all"+ File.separatorChar+"railway" + File.separatorChar + "rail.csv";
+
+	/**
+	 * 鉄道の情報データのファイル名
+	 */
+	private static final String CSV_RAIL_INFO = "all"+ File.separatorChar+"railway" + File.separatorChar + "rail_info.csv";
+
+	/**
+	 * 鉄道の曲線データのファイル名
+	 */
+	private static final String CSV_RAIL_CURVE = "all"+ File.separatorChar+"railway" + File.separatorChar + "rail_curve.csv";
 
 	/**
 	 * バス停のファイル名
@@ -471,8 +487,261 @@ public class KsjDataManager {
 		return ret;
 	}
 
+	private List<RailroadInfo> readRailroadInfoCSV() throws IOException {
+		List<RailroadInfo> infos = new ArrayList<RailroadInfo>();
+		File file = new File(this.csvDir + File.separatorChar + CSV_RAIL_INFO);
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					int railwayType = Integer.parseInt(param[0]);
+					int instituteType = Integer.parseInt(param[1]);
+					String ln = param[2];
+					String company = param[3];
+					infos.add(new RailroadInfo(railwayType, instituteType, ln, company));
+				}
+			} finally {
+				in.close();
+			}
+		}
+		return infos;	
+	}
+
+	private RailwayCollection readRailwayCSV(List<RailroadInfo> infos, List<GmlCurve> curves)
+			throws IOException {
+
+		RailwayCollection ret = null;
+		List<Station> stations = new ArrayList<Station>();
+		List<RailroadSection> sections = new ArrayList<RailroadSection>();
+		
+		File file = new File(this.csvDir + File.separatorChar + CSV_RAIL);
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					String name = param[0];
+					int infoIdx = Integer.parseInt(param[1]);
+					RailroadInfo info = infos.get(infoIdx);
+					
+					int curveIdx = Integer.parseInt(param[2]);
+					GmlCurve curve = curves.get(curveIdx);
+					
+					if ("".equals(name)) {
+						sections.add(new RailroadSection(info, curve));
+					} else {
+						stations.add(new Station(name, info, curve));
+					}
+				}
+				if (stations.isEmpty() || sections.isEmpty()) {
+					throw new IllegalStateException();
+				}
+				ret = new RailwayCollection(stations.toArray(new Station[stations.size()]),
+						sections.toArray(new RailroadSection[sections.size()]));
+			} finally {
+				in.close();
+			}
+		}
+		return ret;
+	}
+
+	private RailwayCollection readRailwayCollectionCSV() {
+		RailwayCollection ret = null;
+		try {
+			File file = new File(this.csvDir + File.separatorChar + CSV_RAIL_CURVE);
+			List<GmlCurve> curves = this.readCurveCSV(file);
+			if (curves.isEmpty())
+				return ret;
+			
+			List<RailroadInfo> infos = this.readRailroadInfoCSV();
+			if (infos.isEmpty())
+				return ret;
+			
+			ret = this.readRailwayCSV(infos, curves);
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return ret;
+	}
+	
+	private boolean writeRailwayStationCSV(RailwayCollection data,
+			Map<RailroadInfo, Integer> infoMap, List<RailroadInfo> infoList,
+			Map<GmlCurve, Integer> curveMap, List<GmlCurve> curveList) throws IOException {
+
+		boolean ret = true;
+		
+		
+		String path = this.csvDir + File.separatorChar + CSV_RAIL;
+		
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: " + file);
+		}
+		File tmpFile = new File(path + ".tmp");
+		try {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
+			}
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
+					tmpFile), CHARSET));
+			try {
+				for (Station station : data.getStations()) {
+
+					RailroadInfo info = station.getInfo();
+					GmlCurve curve = station.getCurve();
+
+					Integer infoIdx = infoMap.get(info);
+					if (infoIdx == null) {
+						infoIdx = infoList.size();
+						infoMap.put(info, infoIdx);
+						infoList.add(info);
+					} else {
+						info = infoList.get(infoIdx);
+						station.setInfo(info);
+					}
+
+					Integer curveIdx = curveMap.get(info);
+					if (curveIdx == null) {
+						curveIdx = curveList.size();
+						curveMap.put(curve, curveIdx);
+						curveList.add(curve);
+					} else {
+						curve = curveList.get(curveIdx);
+						station.setCurve(curve);
+					}
+
+					out.write(String.format("%s,%d,%d", station.getName(), infoIdx, curveIdx));
+					out.newLine();
+					out.flush();
+				}
+				
+				for (RailroadSection section : data.getRailroadSection()) {
+
+					RailroadInfo info = section.getInfo();
+					GmlCurve curve = section.getCurve();
+
+					Integer infoIdx = infoMap.get(info);
+					if (infoIdx == null) {
+						infoIdx = infoList.size();
+						infoMap.put(info, infoIdx);
+						infoList.add(info);
+					} else {
+						info = infoList.get(infoIdx);
+						section.setInfo(info);
+					}
+
+					Integer curveIdx = curveMap.get(info);
+					if (curveIdx == null) {
+						curveIdx = curveList.size();
+						curveMap.put(curve, curveIdx);
+						curveList.add(curve);
+					} else {
+						curve = curveList.get(curveIdx);
+						section.setCurve(curve);
+					}
+
+					out.write(String.format(",%d,%d", infoIdx, curveIdx));
+
+					out.newLine();
+					out.flush();
+				}
+			} finally {
+				out.close();
+			}
+			if (!tmpFile.renameTo(file)) {
+				throw new IllegalStateException("Failure of rename: " + tmpFile + " => " + file);
+			}
+		} catch (IOException e) {
+			if (tmpFile.isFile() && tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: " + tmpFile);
+			}
+			throw e;
+		}
+		return ret;
+	}
+
+	private void writeRailroadInfoCSV(List<RailroadInfo> infos) throws IOException {
+		String path = this.csvDir + File.separatorChar + CSV_RAIL_INFO;
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: " + file);
+		}
+		File tmpFile = new File(path + ".csv");
+		try {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
+			}
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
+					tmpFile), CHARSET));
+			try {
+				for (RailroadInfo info : infos) {
+					out.write(String.format("%d,%d,%s,%s\n",
+							info.getRailwayType(), info.getInstituteType(),
+							info.getLine(), info.getCompany()));
+				}
+			} finally {
+				out.close();
+			}
+			if (!tmpFile.renameTo(new File(path))) {
+				throw new IllegalStateException("Failure of rename: " + tmpFile + " => " + path);
+			}
+		} catch (IOException e) {
+			if (tmpFile.isFile() && !tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: " + tmpFile);
+			}
+			throw e;
+		}
+	}
+	
+	public boolean writeRailwayCollectionCSV(RailwayCollection data) {
+		boolean ret = true;
+
+		List<RailroadInfo> infoList = new ArrayList<RailroadInfo>();
+		Map<RailroadInfo, Integer> infoMap = new HashMap<RailroadInfo, Integer>();
+
+		List<GmlCurve> curveList = new ArrayList<GmlCurve>();
+		Map<GmlCurve, Integer> curveMap = new HashMap<GmlCurve, Integer>();
+		
+		String path = this.csvDir + File.separatorChar + CSV_RAIL_CURVE;
+		try {
+			// 1. Station
+			writeRailwayStationCSV(data, infoMap, infoList, curveMap, curveList);
+
+			// 2. Railroad Info
+			writeRailroadInfoCSV(infoList);
+			
+			// 3. Curve
+			writeCurveCSV(path, curveList);
+		} catch (IOException e) {
+			ret = false;
+			e.printStackTrace();
+		}
+
+		return ret;
+	}
+	
+	/**
+	 * @return 鉄道のデータ配列
+	 */
 	public RailwayCollection getRailwayCollection() {
-		return this.readRailwayCollectionGML();
+		RailwayCollection ret = this.readRailwayCollectionCSV();
+		if (ret == null) {
+			long t0 = System.currentTimeMillis();
+
+			ret = this.readRailwayCollectionGML();
+
+			System.out.printf("RAILWAY: %dms\n", (System.currentTimeMillis() - t0));
+
+			this.writeRailwayCollectionCSV(ret);
+		}
+		return ret;
 	}
 
 	/**
@@ -481,7 +750,7 @@ public class KsjDataManager {
 	private RailwayCollection readRailwayCollectionGML() {
 		long t0 = System.currentTimeMillis();
 
-		String name = "N02.obj";
+		String name = "all" + File.separatorChar + "N02.obj";
 		RailwayCollection ret = this.readSerializable(name, RailwayCollection.class);
 		if (ret == null) {
 			this.getKsjFile(TYPE_RAILWAY);
@@ -761,12 +1030,15 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private BusCollection readBusCollectionsCsv(int code) {
+	private BusCollection readBusCollectionCSV(int code) {
 		BusCollection ret = null;
 		try {
 			long t0 = System.currentTimeMillis();
 
-			List<GmlCurve> curves = readCurveCSV(code);
+			File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code));
+
+			List<GmlCurve> curves = readCurveCSV(file);
 			if (curves.isEmpty())
 				return ret;
 
@@ -877,10 +1149,8 @@ public class KsjDataManager {
 		return infos;
 	}
 
-	private List<GmlCurve> readCurveCSV(int code) throws IOException {
+	private List<GmlCurve> readCurveCSV(File file) throws IOException {
 		List<GmlCurve> ret = new ArrayList<GmlCurve>();
-		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code));
 		if (file.isFile()) {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file),
 					CHARSET));
@@ -1128,9 +1398,7 @@ public class KsjDataManager {
 		}
 	}
 
-	private void writeCurveCsv(int code, List<GmlCurve> curveList) throws IOException {
-		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code);
+	private void writeCurveCSV(String path, List<GmlCurve> curveList) throws IOException {
 		File file = new File(path);
 		if (file.exists() && !file.delete()) {
 			throw new IllegalStateException("Failure of delete: " + file);
@@ -1169,7 +1437,7 @@ public class KsjDataManager {
 		}
 	}
 
-	private boolean writeBusCollectionsCsv(BusCollection collection) {
+	private boolean writeBusCollectionCsv(BusCollection collection) {
 		
 		boolean ret = true;
 
@@ -1192,7 +1460,11 @@ public class KsjDataManager {
 			writeBusRouteInfoCsv(code, infoList);
 
 			// 4 GML Curve
-			writeCurveCsv(code, curveList);
+
+			String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_BUS_ROUTE_CURVE_FORMAT, code);
+
+			this.writeCurveCSV(path, curveList);
 			
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1217,7 +1489,7 @@ public class KsjDataManager {
 	 * @return バスのデータ(バスルートおよびバス停留所)
 	 */
 	public BusCollection getBusCollection(int code) {
-		BusCollection ret = this.readBusCollectionsCsv(code);
+		BusCollection ret = this.readBusCollectionCSV(code);
 		if (ret == null) {
 			long t0 = System.currentTimeMillis();
 
@@ -1227,7 +1499,7 @@ public class KsjDataManager {
 			System.out.printf("BUS(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 
 			ret = new BusCollection(code, stops, routes);
-			this.writeBusCollectionsCsv(ret);
+			this.writeBusCollectionCsv(ret);
 		}
 		return ret;
 	}

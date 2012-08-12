@@ -4,35 +4,40 @@ import java.io.Serializable;
 
 public class Station implements Data, Serializable {
 
-	private String line;
-	private String company;
-	private String name;
-	private int railwayType;
-	private int instituteType;
-	private GmlCurve curve;
+
+	private RailroadInfo info;
 	
-	public String getLine() {
-		return this.line;
+	private String name;
+	private GmlCurve curve;
+
+	public Station() {
+		this.info = new RailroadInfo();
 	}
 	
-	public String getCompany() {
-		return this.company;
+	public Station(String name, RailroadInfo info, GmlCurve curve) {
+		this.name = name;
+		this.info = info;
+		this.curve = curve;
+	}
+	
+	public RailroadInfo getInfo() {
+		return this.info;
+	}
+	
+	public void setInfo(RailroadInfo info) {
+		this.info = info;
 	}
 	
 	public String getName() {
 		return this.name;
 	}
 	
-	public int getRailwayType() {
-		return this.railwayType;
-	}
-	
-	public int getInstitudeType() {
-		return this.instituteType;
-	}
-	
 	public GmlCurve getCurve() {
 		return this.curve;
+	}
+	
+	public void setCurve(GmlCurve curve) {
+		this.curve = curve;
 	}
 	
 	@Override
@@ -40,15 +45,17 @@ public class Station implements Data, Serializable {
 		if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:lin".equals(tag)) {
-				this.line = string;
+				this.info.setLine(string);
 			} else if ("ksj:opc".equals(tag)) {
-				this.company = string;
+				this.info.setCompany(string);
 			} else if ("ksj:stn".equals(tag)) {
 				this.name = string;
 			} else if ("ksj:int".equals(tag)) {
-				this.instituteType = Integer.parseInt(string);
-			} else if ("ksj:rar".equals(tag)) {
-				this.railwayType = Integer.parseInt(string);
+				int instituteType = Integer.parseInt(string);
+				this.info.setInstituteType(instituteType);
+			} else if ("ksj:rac".equals(tag)) {
+				int railwayType = "".equals(string) ? -1 : Integer.parseInt(string);
+				this.info.setRailwayType(railwayType);
 			}
 		} else if (obj instanceof RailroadSection) {
 			RailroadSection section = (RailroadSection) obj;
@@ -56,8 +63,7 @@ public class Station implements Data, Serializable {
 				this.curve = section.getCurve();
 			} else {
 				assert(this.curve.equals(section.getCurve()));
-				this.company = section.getCompany();
-				this.line = section.getLine();
+				this.info = section.getInfo();
 			}
 		} else if (obj instanceof GmlCurve) {
 			GmlCurve curve = (GmlCurve) obj;

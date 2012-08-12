@@ -13,13 +13,14 @@ public class Main {
 				".data"+File.separatorChar+"serialize"
 		);
 
+		mgr.getRailwayCollection();
+
 		for (int code = 1; code <= 47; ++code) {
 			
 			mgr.getAreaCollection(code);
 			mgr.getBusCollection(code);
 			
 		}
-		mgr.getRailwayCollection();
 
 		// mgr.getAreaCollections();
 		// mgr.getBusCollections();
