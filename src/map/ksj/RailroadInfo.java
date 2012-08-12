@@ -54,7 +54,7 @@ public class RailroadInfo implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return line.hashCode();
+		return this.line.hashCode() + this.company.hashCode();
 	}
 
 	@Override
@@ -64,8 +64,15 @@ public class RailroadInfo implements Serializable {
 			RailroadInfo info = (RailroadInfo) obj;
 			ret = this.line.equals(info.line) && this.company.equals(info.company) &&
 					this.railwayType == info.railwayType && this.instituteType == info.instituteType;
+			// assert((this.line.equals(info.line) && this.company.equals(info.company) && !ret) || ((!this.line.equals(info.line) || !this.company.equals(info.company)) && ret))
+			// : this.toString() + info.toString();
 		}
 		return ret;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("[%d:%d] %s (%s)", this.railwayType, this.instituteType, this.line, this.company);
 	}
 
 }

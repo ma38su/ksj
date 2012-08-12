@@ -6,7 +6,7 @@ import map.ksj.Area;
 import map.ksj.Data;
 
 /**
- * 国土数値情報JPGIS2.1(GML)形式の行政界(面)を読み込むための
+ * 国土数値情報JPGIS2.1(GML)形式の行政区画(面)を読み込むための
  * DefaultHandlerの継承クラス
  * @author fujiwara
  */

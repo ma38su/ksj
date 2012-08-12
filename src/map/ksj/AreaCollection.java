@@ -3,7 +3,7 @@ package map.ksj;
 import java.io.Serializable;
 
 /**
- * 都道府県の行政界(面)
+ * 都道府県の行政区画(面)
  * @author fujiwara
  */
 public class AreaCollection implements Serializable {

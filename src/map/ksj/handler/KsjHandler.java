@@ -23,7 +23,8 @@ import map.ksj.Station;
 import org.xml.sax.Attributes;
 import org.xml.sax.helpers.DefaultHandler;
 
-import database.FixedPoint;
+import util.FixedPoint;
+
 
 public class KsjHandler extends DefaultHandler {
 
@@ -192,10 +193,12 @@ public class KsjHandler extends DefaultHandler {
 			String string = this.buf.toString().replaceFirst("^\\s+", "");
 			if ("gml:posList".equals(tag)) {
 				String[] param = string.split("\\s+");
+				int size = param.length / 2;
+				assert((param.length % 2) == 0);
 				List<Point> points = new ArrayList<Point>();
-				for (int i = 0; i + 1 < param.length; i += 2) {
-					int lat = FixedPoint.parseFixedPoint(param[i]);
-					int lng = FixedPoint.parseFixedPoint(param[i + 1]);
+				for (int i = 0; i < size; i++) {
+					int lat = FixedPoint.parseFixedPoint(param[i * 2]);
+					int lng = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
 					points.add(new Point(lng, lat));
 				}
 				data.link(tag, points.toArray(new Point[points.size()]));

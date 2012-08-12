@@ -1,5 +1,6 @@
 package map.ksj;
 
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -46,6 +47,10 @@ public class GmlCurve implements Data, Serializable {
 	
 	public Point getLastPoint() {
 		return new Point(this.x[this.n - 1], this.y[this.n - 1]);
+	}
+	
+	public void draw(Graphics2D g) {
+		g.drawPolyline(this.x, this.y, this.n);
 	}
 	
 	public void link(String tag, Object obj) {

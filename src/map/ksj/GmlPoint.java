@@ -2,7 +2,8 @@ package map.ksj;
 
 import java.awt.Point;
 
-import database.FixedPoint;
+import util.FixedPoint;
+
 
 /**
  * 点型

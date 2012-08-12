@@ -1,5 +1,6 @@
 package map.ksj;
 
+import java.awt.Graphics2D;
 import java.io.Serializable;
 
 /**
@@ -75,6 +76,10 @@ public class BusRoute implements Data, Serializable {
 	 */
 	public String getLine() {
 		return this.line;
+	}
+	
+	public void draw(Graphics2D g) {
+		this.curve.draw(g);
 	}
 
 	/**

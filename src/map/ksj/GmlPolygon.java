@@ -1,5 +1,6 @@
 package map.ksj;
 
+import java.awt.Graphics2D;
 import java.io.Serializable;
 import java.util.Arrays;
 
@@ -17,9 +18,12 @@ public class GmlPolygon implements Data, Serializable {
 	}
 
 	public GmlPolygon(int n, int[] x, int[] y) {
+
 		this.n = n;
 		this.x = x;
 		this.y = y;
+		
+		assert(this.x[0] == this.x[this.n - 1] && this.y[0] == this.y[this.n - 1]);
 	}
 
 	public int getArrayLength() {
@@ -33,6 +37,14 @@ public class GmlPolygon implements Data, Serializable {
 	public int[] getArrayY() {
 		return this.y;
 	}
+	
+	public void draw(Graphics2D g) {
+		g.drawPolyline(x, y, n);
+	}
+
+	public void fill(Graphics2D g) {
+		g.fillPolygon(x, y, n);
+	}
 
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlCurve) {
@@ -40,6 +52,7 @@ public class GmlPolygon implements Data, Serializable {
 			this.x = curve.getArrayX();
 			this.y = curve.getArrayY();
 			this.n = curve.getArrayLength();
+			assert(this.x[0] == this.x[this.n - 1] && this.y[0] == this.y[this.n - 1]);
 		}
 	}
 	
@@ -74,7 +87,7 @@ public class GmlPolygon implements Data, Serializable {
 		}
 		return "points: "+ sb.toString();
 	}
-
+	
 	@Override
 	public int hashCode() {
 		return this.x[0] + this.y[0] + this.x[this.n - 1] + this.y[this.n - 1];

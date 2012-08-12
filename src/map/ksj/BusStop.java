@@ -10,23 +10,6 @@ import java.util.List;
  */
 public class BusStop implements Data, Serializable {
 
-	public BusStop() {
-		this.infos = new BusRouteInfo[0];
-	}
-
-	public BusStop(String name, int x, int y, BusRouteInfo[] infos) {
-		this.name = name;
-		this.x = x;
-		this.y = y;
-		this.infos = infos;
-	}
-	
-	public void addRouteInfo(BusRouteInfo info) {
-		List<BusRouteInfo> tmp = new ArrayList<BusRouteInfo>(infos.length + 1);
-		tmp.add(info);
-		infos = tmp.toArray(new BusRouteInfo[tmp.size()]);
-	}
-
 	/**
 	 * バス路線情報
 	 */
@@ -47,6 +30,23 @@ public class BusStop implements Data, Serializable {
 	 */
 	private String name;
 
+	public BusStop() {
+		this.infos = new BusRouteInfo[0];
+	}
+
+	public BusStop(String name, int x, int y, BusRouteInfo[] infos) {
+		this.name = name;
+		this.x = x;
+		this.y = y;
+		this.infos = infos;
+	}
+	
+	public void addRouteInfo(BusRouteInfo info) {
+		List<BusRouteInfo> tmp = new ArrayList<BusRouteInfo>(infos.length + 1);
+		tmp.add(info);
+		infos = tmp.toArray(new BusRouteInfo[tmp.size()]);
+	}
+	
 	/**
 	 * @return　バス停名
 	 */
@@ -90,4 +90,5 @@ public class BusStop implements Data, Serializable {
 			}
 		}
 	}
+
 }

@@ -1,7 +1,14 @@
 package map.ksj;
 
+import java.awt.Graphics2D;
 import java.io.Serializable;
 
+/**
+ * 行政区画(面)
+ * 
+ * @author fujiwara
+ *
+ */
 public class Area implements Data, Serializable {
 
 	private GmlPolygon polygon;
@@ -28,6 +35,14 @@ public class Area implements Data, Serializable {
 		return this.polygon;
 	}
 
+	public void draw(Graphics2D g) {
+		this.polygon.draw(g);
+	}
+	
+	public void fill(Graphics2D g) {
+		this.polygon.fill(g);
+	}
+	
 	@Override
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlPolygon) {
@@ -64,4 +79,5 @@ public class Area implements Data, Serializable {
 		}
 		return ret;
 	}
+	
 }

@@ -29,6 +29,8 @@ import java.util.zip.ZipInputStream;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import util.FixedPoint;
+
 import map.ksj.Area;
 import map.ksj.AreaCollection;
 import map.ksj.AreaInfo;
@@ -38,6 +40,7 @@ import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.GmlCurve;
 import map.ksj.GmlPolygon;
+import map.ksj.KsjPrefecture;
 import map.ksj.RailroadInfo;
 import map.ksj.RailroadSectionData;
 import map.ksj.RailwayCollection;
@@ -60,7 +63,7 @@ public class KsjDataManager {
 	private static final int TYPE_RAILWAY = 2;
 
 	/**
-	 * 行政界(面)のコード
+	 * 行政区画(面)のコード
 	 */
 	private static final int TYPE_ADMINISTRATIVEAREA = 3;
 
@@ -119,13 +122,13 @@ public class KsjDataManager {
 			"bus" + File.separatorChar + "bus_route_curve_%02d.csv";
 
 	/**
-	 * 行政界(面)のファイル名
+	 * 行政区画(面)のファイル名
 	 */
 	private static final String CSV_AREA_FORMAT = 
 			"area" + File.separatorChar + "area_%02d.csv";
 
 	/**
-	 * 行政界(面)のポリゴンデータのファイル名
+	 * 行政区画(面)のポリゴンデータのファイル名
 	 */
 	private static final String CSV_AREA_INFO_FORMAT = 
 			"area" + File.separatorChar + "area_info_%02d.csv";
@@ -553,6 +556,8 @@ public class KsjDataManager {
 	private RailwayCollection readRailwayCollectionCSV() {
 		RailwayCollection ret = null;
 		try {
+			long t0 = System.currentTimeMillis();
+
 			File file = new File(this.csvDir + File.separatorChar + CSV_RAIL_CURVE);
 			List<GmlCurve> curves = this.readCurveCSV(file);
 			if (curves.isEmpty())
@@ -563,7 +568,8 @@ public class KsjDataManager {
 				return ret;
 			
 			ret = this.readRailwayCSV(infos, curves);
-			
+			System.out.printf("RAILWAY: %dms\n", (System.currentTimeMillis() - t0));
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -745,7 +751,7 @@ public class KsjDataManager {
 	}
 
 	/**
-	 * @return 行政界(面)のデータ配列
+	 * @return 行政区画(面)のデータ配列
 	 */
 	private RailwayCollection readRailwayCollectionGML() {
 		long t0 = System.currentTimeMillis();
@@ -786,12 +792,12 @@ public class KsjDataManager {
 				String line;
 				while ((line = in.readLine()) != null) {
 					String[] param = line.split(",");
-					String prn = param[0];
-					String sun = param[1];
-					String con = param[2];
-					String cn2 = param[3];
-					int aac = Integer.parseInt(param[4]);
-					ret.add(new AreaInfo(aac, prn, sun, con, cn2));
+					int prefCode = Integer.parseInt(param[0]);
+					int aac = Integer.parseInt(param[1]);
+					String sun = param.length > 2 ? param[2] : "";
+					String con = param.length > 3 ? param[3] : "";
+					String cn2 = param.length > 4 ? param[4] : "";
+					ret.add(new AreaInfo(prefCode, aac, sun, con, cn2));
 				}
 			} finally {
 				in.close();
@@ -817,8 +823,8 @@ public class KsjDataManager {
 					int[] x = new int[n];
 					int[] y = new int[n];
 					for (int i = 0; i < n; i++) {
-						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
-						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 3]);
+						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
+						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 3]);
 					}
 					GmlPolygon polygon = new GmlPolygon(n, x, y);
 					ret.add(new Area(info, polygon));
@@ -890,8 +896,8 @@ public class KsjDataManager {
 					
 					out.write(String.format("%d,%d", idx, n));
 					for (int i = 0; i < n; i++) {
-						out.write(String.format(",%f,%f", FixedPoint.parseDouble(x[i]),
-								FixedPoint.parseDouble(y[i])));
+						out.write(String.format(",%f,%f", FixedPoint.parseDouble(y[i]),
+								FixedPoint.parseDouble(x[i])));
 					}
 					out.newLine();
 					out.flush();
@@ -929,7 +935,7 @@ public class KsjDataManager {
 			try {
 				for (int i = 0; i < infoList.size(); i++) {
 					AreaInfo area = infoList.get(i);
-					out.write(String.format("%s,%s,%s,%s,%d", area.getPrn(), area.getSun(), area.getCon(), area.getCn2(), area.getAac()));
+					out.write(String.format("%02d,%05d,%s,%s,%s", area.getCode(), area.getAac(), area.getSun(), area.getCon(), area.getCn2()));
 					out.newLine();
 					out.flush();
 				}
@@ -970,9 +976,15 @@ public class KsjDataManager {
 		return ret;
 	}
 	
+	public KsjPrefecture getPrefectureData(int code) {
+		AreaCollection area = getAreaCollection(code);
+		BusCollection bus = getBusCollection(code);
+		return new KsjPrefecture(code, area.getAreas(), bus);
+	}
+	
 	/**
 	 * @param code 都道府県コード
-	 * @return 行政界(面)のデータ配列
+	 * @return 行政区画(面)のデータ配列
 	 */
 	public AreaCollection getAreaCollection(int code) {
 		AreaCollection ret = this.readAreaCollectionCSV(code);
@@ -987,7 +999,7 @@ public class KsjDataManager {
 	}
 
 	/**
-	 * @return 行政界(面)のデータ配列
+	 * @return 行政区画(面)のデータ配列
 	 */
 	public AreaCollection[] getAreaCollections() {
 		AreaCollection[] ret = new AreaCollection[47];
@@ -999,7 +1011,7 @@ public class KsjDataManager {
 
 	/**
 	 * @param code 都道府県コード
-	 * @return 行政界(面)のデータ配列
+	 * @return 行政区画(面)のデータ配列
 	 */
 	public AreaCollection readAreaCollectionGML(int code) {
 		long t0 = System.currentTimeMillis();
@@ -1264,8 +1276,8 @@ public class KsjDataManager {
 			try {
 				for (BusStop stop : stops) {
 					out.write(String.format("%s,%f,%f", stop.getName(),
-							FixedPoint.parseDouble(stop.getX()),
-							FixedPoint.parseDouble(stop.getY())));
+							FixedPoint.parseDouble(stop.getY()),
+							FixedPoint.parseDouble(stop.getX())));
 					BusRouteInfo[] infos = stop.getBusRouteInfos();
 					for (int i = 0; i < infos.length; i++) {
 						BusRouteInfo info = infos[i];
@@ -1417,8 +1429,8 @@ public class KsjDataManager {
 					int[] y = curve.getArrayY();
 					out.write(Integer.toString(n));
 					for (int i = 0; i < n; i++) {
-						out.write(String.format(",%f,%f", FixedPoint.parseDouble(x[i]),
-								FixedPoint.parseDouble(y[i])));
+						out.write(String.format(",%f,%f",
+								FixedPoint.parseDouble(y[i]), FixedPoint.parseDouble(x[i])));
 					}
 					out.newLine();
 					out.flush();
