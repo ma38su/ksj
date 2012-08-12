@@ -1,5 +1,6 @@
 package map.ksj;
 
+import java.awt.Graphics2D;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,5 +72,10 @@ public class RailroadSectionData implements Data, RailroadSection, Serializable 
 				this.info.setRailwayType(railwayType);
 			}
 		}
+	}
+
+	@Override
+	public void draw(Graphics2D g) {
+		this.curve.draw(g);
 	}
 }

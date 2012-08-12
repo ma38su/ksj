@@ -1,5 +1,6 @@
 package map.ksj;
 
+import java.awt.Graphics2D;
 import java.io.Serializable;
 
 public class Station implements Data, RailroadSection, Serializable {
@@ -31,6 +32,14 @@ public class Station implements Data, RailroadSection, Serializable {
 	 */
 	public String getName() {
 		return this.name;
+	}
+	
+	public int getX() {
+		return this.curve.getFirstPoint().x;
+	}
+	
+	public int getY() {
+		return this.curve.getFirstPoint().y;
 	}
 	
 	@Override
@@ -86,6 +95,11 @@ public class Station implements Data, RailroadSection, Serializable {
 				assert(this.curve.equals(curve));
 			}
 		}
+	}
+
+	@Override
+	public void draw(Graphics2D g) {
+		this.curve.draw(g);
 	}
 
 }

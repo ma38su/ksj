@@ -52,7 +52,7 @@ public class GmlCurve implements Data, Serializable {
 	public void draw(Graphics2D g) {
 		g.drawPolyline(this.x, this.y, this.n);
 	}
-	
+
 	public void link(String tag, Object obj) {
 		if (obj instanceof Point[]) {
 			Point[] points = (Point[]) obj;
