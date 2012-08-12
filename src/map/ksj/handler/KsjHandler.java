@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import map.ksj.AdministrativeArea;
+import map.ksj.Area;
 import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
@@ -45,7 +45,7 @@ public class KsjHandler extends DefaultHandler {
 		this.classMap.put("ksj:BusRoute", BusRoute.class);
 		this.classMap.put("ksj:RailroadSection", RailroadSection.class);
 		this.classMap.put("ksj:Station", Station.class);
-		this.classMap.put("ksj:AdministrativeArea", AdministrativeArea.class);
+		this.classMap.put("ksj:AdministrativeArea", Area.class);
 
 		this.charactersTarget.add("gml:posList");
 		this.charactersTarget.add("ksj:opc");
@@ -183,12 +183,15 @@ public class KsjHandler extends DefaultHandler {
 		}
 	}
 
+	private static final String STRING_NULL = "";
+	
 	public void fixCharacters() {
+		
+		String tag = this.tagStack.peek();
+		Data data = this.dataStack .peek();
 		if (this.buf.length() > 0) {
-			String tag = this.tagStack.peek();
-			Data data = this.dataStack .peek();
+			String string = this.buf.toString().replaceFirst("^\\s+", "");
 			if ("gml:posList".equals(tag)) {
-				String string = this.buf.toString().replaceFirst("^\\s+", "");
 				String[] param = string.split("\\s+");
 				List<Point> points = new ArrayList<Point>();
 				for (int i = 0; i + 1 < param.length; i += 2) {
@@ -196,9 +199,8 @@ public class KsjHandler extends DefaultHandler {
 					int lng = FixedPoint.parseFixedPoint(param[i + 1]);
 					points.add(new Point(lng, lat));
 				}
-				data.link(tag, points.toArray(new Point[]{}));
+				data.link(tag, points.toArray(new Point[points.size()]));
 			} else if ("gml:pos".equals(tag)) {
-				String string = this.buf.toString().replaceFirst("^\\s+", "");
 				String[] param = string.split("\\s+");
 				assert(param.length == 2);
 				int lat = FixedPoint.parseFixedPoint(param[0]);
@@ -208,6 +210,8 @@ public class KsjHandler extends DefaultHandler {
 				data.link(tag, this.buf.toString());
 			}
 			this.buf.setLength(0);
+		} else if (data != null) {
+			data.link(tag, STRING_NULL);
 		}
 	}
 	

@@ -13,23 +13,15 @@ public class Main {
 				".data"+File.separatorChar+"serialize"
 		);
 
-		mgr.getBusCollections();
-
 		for (int code = 1; code <= 47; ++code) {
 			
-			// N03
-			// mgr.getAdministrativeAreaArray(code);
-
-
-			// P11
-			// BusStop[] stops = mgr.getBusStops(code);
+			mgr.getAreaCollection(code);
+			mgr.getBusCollection(code);
+			
 		}
+		mgr.getRailwayCollection();
 
-//		for (BusRouteInfomation info : infoSet) {
-//			System.out.println(info);
-//		}
-
-		// N02
-//		mgr.getRailway();
+		// mgr.getAreaCollections();
+		// mgr.getBusCollections();
 	}
 }

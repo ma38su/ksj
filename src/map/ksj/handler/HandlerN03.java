@@ -2,7 +2,7 @@ package map.ksj.handler;
 import java.util.ArrayList;
 import java.util.List;
 
-import map.ksj.AdministrativeArea;
+import map.ksj.Area;
 import map.ksj.Data;
 
 /**
@@ -12,20 +12,20 @@ import map.ksj.Data;
  */
 public class HandlerN03 extends KsjHandler {
 
-	public AdministrativeArea[] getAdministrativeAreas() {
-		List<AdministrativeArea> list = new ArrayList<AdministrativeArea>();
+	public Area[] getAreas() {
+		List<Area> list = new ArrayList<Area>();
 		for (Data data : this.getDataMap().values()) {
-			list.add((AdministrativeArea) data);
+			list.add((Area) data);
 		}
 		assert(!list.isEmpty());
-		return list.toArray(new AdministrativeArea[]{});
+		return list.toArray(new Area[list.size()]);
 	}
 
 	@Override
 	protected boolean checkData() {
 		boolean ret = true;
 		for (Data data : this.getDataMap().values()) {
-			if (!(data instanceof AdministrativeArea)) {
+			if (!(data instanceof Area)) {
 				System.out.println(this.getClass() +": "+ data.getClass());
 				ret = false;
 				break;

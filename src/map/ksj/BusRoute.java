@@ -120,7 +120,9 @@ public class BusRoute implements Data, Serializable {
 			} else if ("ksj:rph".equals(tag)) {
 				this.ratePerHoliday = Double.parseDouble(string);
 			} else if ("ksj:rmk".equals(tag)) {
-				System.out.println("remark: "+ string);
+				if (!"".equals(string)) {
+					System.out.println("remark: "+ string);
+				}
 			}
 		}
 	}

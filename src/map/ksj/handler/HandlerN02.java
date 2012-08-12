@@ -27,7 +27,7 @@ public class HandlerN02 extends KsjHandler {
 				assert(data instanceof RailroadSection);
 			}
 		}
-		return ret.toArray(new Station[]{});
+		return ret.toArray(new Station[ret.size()]);
 	}
 	
 	public RailroadSection[] getRailroadSections() {
@@ -39,7 +39,7 @@ public class HandlerN02 extends KsjHandler {
 				assert(data instanceof Station);
 			}
 		}
-		return ret.toArray(new RailroadSection[]{});
+		return ret.toArray(new RailroadSection[ret.size()]);
 	}
 	
 	@Override

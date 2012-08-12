@@ -12,6 +12,27 @@ public class GmlPolygon implements Data, Serializable {
 	private int n;
 	private int[] x;
 	private int[] y;
+	
+	public GmlPolygon() {
+	}
+
+	public GmlPolygon(int n, int[] x, int[] y) {
+		this.n = n;
+		this.x = x;
+		this.y = y;
+	}
+
+	public int getArrayLength() {
+		return this.n;
+	}
+	
+	public int[] getArrayX() {
+		return this.x;
+	}
+	
+	public int[] getArrayY() {
+		return this.y;
+	}
 
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlCurve) {

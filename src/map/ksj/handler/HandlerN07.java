@@ -23,7 +23,7 @@ public class HandlerN07 extends KsjHandler {
 			assert(data instanceof BusRoute);
 			ret.add((BusRoute) data);
 		}
-		return ret.toArray(new BusRoute[]{});
+		return ret.toArray(new BusRoute[ret.size()]);
 	}
 	
 	@Override

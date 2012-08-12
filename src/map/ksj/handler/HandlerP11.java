@@ -20,7 +20,7 @@ public class HandlerP11 extends KsjHandler {
 			ret.add((BusStop) data);
 		}
 		
-		return ret.toArray(new BusStop[]{});
+		return ret.toArray(new BusStop[ret.size()]);
 	}
 
 	@Override
