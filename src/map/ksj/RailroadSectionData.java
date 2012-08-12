@@ -1,68 +1,68 @@
 package map.ksj;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Station implements Data, RailroadSection, Serializable {
-
-	/**
-	 * 駅名
-	 */
-	private String name;
+public class RailroadSectionData implements Data, RailroadSection, Serializable {
 
 	/**
 	 * 路線情報
 	 */
 	private RailroadInfo info;
-	
-	private GmlCurve curve;
 
-	public Station() {
+	private GmlCurve curve;
+	
+	public transient List<Integer> links = new ArrayList<Integer>();
+	
+	public int[] getLinks() {
+		int[] ret = new int[this.links.size()];
+		for (int i = 0; i < ret.length; i++) {
+			ret[i] = this.links.get(i);
+		}
+		return ret;
+	}
+	
+	public void addLink(int idx) {
+		this.links.add(idx);
+	}
+
+	public RailroadSectionData() {
 		this.info = new RailroadInfo();
 	}
 	
-	public Station(String name, RailroadInfo info, GmlCurve curve) {
-		this.name = name;
+	public RailroadSectionData(RailroadInfo info, GmlCurve curve) {
 		this.info = info;
 		this.curve = curve;
 	}
-
-	/**
-	 * @return　駅名
-	 */
-	public String getName() {
-		return this.name;
-	}
 	
-	@Override
 	public RailroadInfo getInfo() {
 		return this.info;
 	}
 	
-	@Override
 	public void setInfo(RailroadInfo info) {
 		this.info = info;
 	}
 	
-	@Override
 	public GmlCurve getCurve() {
 		return this.curve;
 	}
-	
-	@Override
+
 	public void setCurve(GmlCurve curve) {
 		this.curve = curve;
 	}
 	
 	@Override
 	public void link(String tag, Object obj) {
-		if (obj instanceof String) {
+		if (obj instanceof GmlCurve) {
+			assert("ksj:loc".equals(tag));
+			this.curve = (GmlCurve) obj;
+		} else if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:lin".equals(tag)) {
 				this.info.setLine(string);
 			} else if ("ksj:opc".equals(tag)) {
 				this.info.setCompany(string);
-			} else if ("ksj:stn".equals(tag)) {
-				this.name = string;
 			} else if ("ksj:int".equals(tag)) {
 				int instituteType = Integer.parseInt(string);
 				this.info.setInstituteType(instituteType);
@@ -70,22 +70,6 @@ public class Station implements Data, RailroadSection, Serializable {
 				int railwayType = "".equals(string) ? -1 : Integer.parseInt(string);
 				this.info.setRailwayType(railwayType);
 			}
-		} else if (obj instanceof RailroadSectionData) {
-			RailroadSectionData section = (RailroadSectionData) obj;
-			if (this.curve == null) {
-				this.curve = section.getCurve();
-			} else {
-				assert(this.curve.equals(section.getCurve()));
-				this.info = section.getInfo();
-			}
-		} else if (obj instanceof GmlCurve) {
-			GmlCurve curve = (GmlCurve) obj;
-			if (this.curve == null) {
-				this.curve = curve;
-			} else {
-				assert(this.curve.equals(curve));
-			}
 		}
 	}
-
 }

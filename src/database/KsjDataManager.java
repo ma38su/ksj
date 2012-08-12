@@ -39,7 +39,7 @@ import map.ksj.BusStop;
 import map.ksj.GmlCurve;
 import map.ksj.GmlPolygon;
 import map.ksj.RailroadInfo;
-import map.ksj.RailroadSection;
+import map.ksj.RailroadSectionData;
 import map.ksj.RailwayCollection;
 import map.ksj.Station;
 import map.ksj.handler.HandlerN02;
@@ -515,7 +515,7 @@ public class KsjDataManager {
 
 		RailwayCollection ret = null;
 		List<Station> stations = new ArrayList<Station>();
-		List<RailroadSection> sections = new ArrayList<RailroadSection>();
+		List<RailroadSectionData> sections = new ArrayList<RailroadSectionData>();
 		
 		File file = new File(this.csvDir + File.separatorChar + CSV_RAIL);
 		if (file.isFile()) {
@@ -533,7 +533,7 @@ public class KsjDataManager {
 					GmlCurve curve = curves.get(curveIdx);
 					
 					if ("".equals(name)) {
-						sections.add(new RailroadSection(info, curve));
+						sections.add(new RailroadSectionData(info, curve));
 					} else {
 						stations.add(new Station(name, info, curve));
 					}
@@ -542,7 +542,7 @@ public class KsjDataManager {
 					throw new IllegalStateException();
 				}
 				ret = new RailwayCollection(stations.toArray(new Station[stations.size()]),
-						sections.toArray(new RailroadSection[sections.size()]));
+						sections.toArray(new RailroadSectionData[sections.size()]));
 			} finally {
 				in.close();
 			}
@@ -622,7 +622,7 @@ public class KsjDataManager {
 					out.flush();
 				}
 				
-				for (RailroadSection section : data.getRailroadSection()) {
+				for (RailroadSectionData section : data.getRailroadSection()) {
 
 					RailroadInfo info = section.getInfo();
 					GmlCurve curve = section.getCurve();
@@ -761,7 +761,7 @@ public class KsjDataManager {
 				parser.parse(file, handler);
 
 				Station[] stations = handler.getStations();
-				RailroadSection[] sections = handler.getRailroadSections();
+				RailroadSectionData[] sections = handler.getRailroadSections();
 
 				ret = new RailwayCollection(stations, sections);
 

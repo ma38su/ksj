@@ -2,9 +2,7 @@ package map.ksj;
 
 import java.awt.Point;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * 曲線型
@@ -40,20 +38,6 @@ public class GmlCurve implements Data, Serializable {
 	
 	public int getArrayLength() {
 		return this.n;
-	}
-	
-	public List<Integer> links = new ArrayList<Integer>();
-	
-	public void addLink(int idx) {
-		this.links.add(idx);
-	}
-	
-	public int[] getLinks() {
-		int[] ret = new int[this.links.size()];
-		for (int i = 0; i < ret.length; i++) {
-			ret[i] = this.links.get(i);
-		}
-		return ret;
 	}
 	
 	public Point getFirstPoint() {

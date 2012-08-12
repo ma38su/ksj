@@ -17,7 +17,7 @@ import map.ksj.Data;
 import map.ksj.GmlCurve;
 import map.ksj.GmlPoint;
 import map.ksj.GmlPolygon;
-import map.ksj.RailroadSection;
+import map.ksj.RailroadSectionData;
 import map.ksj.Station;
 
 import org.xml.sax.Attributes;
@@ -43,7 +43,7 @@ public class KsjHandler extends DefaultHandler {
 		this.classMap.put("ksj:BusStop", BusStop.class);
 		this.classMap.put("ksj:busRouteInformation", BusRouteInfo.class);
 		this.classMap.put("ksj:BusRoute", BusRoute.class);
-		this.classMap.put("ksj:RailroadSection", RailroadSection.class);
+		this.classMap.put("ksj:RailroadSection", RailroadSectionData.class);
 		this.classMap.put("ksj:Station", Station.class);
 		this.classMap.put("ksj:AdministrativeArea", Area.class);
 
@@ -112,7 +112,6 @@ public class KsjHandler extends DefaultHandler {
 		}
 		assert(checkData()) : this.getClass();
 		
-		this.postProcessing();
 	}
 
 	protected boolean checkData() {
@@ -213,9 +212,6 @@ public class KsjHandler extends DefaultHandler {
 		} else if (data != null) {
 			data.link(tag, STRING_NULL);
 		}
-	}
-	
-	protected void postProcessing() {
 	}
 	
 }

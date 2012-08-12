@@ -4,10 +4,10 @@ import java.io.Serializable;
 
 public class RailwayCollection implements Serializable {
 
-	private final RailroadSection[] sections;
+	private final RailroadSectionData[] sections;
 	private final Station[] stations;
 	
-	public RailwayCollection(Station[] stations, RailroadSection[] sections) {
+	public RailwayCollection(Station[] stations, RailroadSectionData[] sections) {
 		this.stations = stations;
 		this.sections = sections;
 	}
@@ -16,7 +16,7 @@ public class RailwayCollection implements Serializable {
 		return this.stations;
 	}
 	
-	public RailroadSection[] getRailroadSection() {
+	public RailroadSectionData[] getRailroadSection() {
 		return this.sections;
 	}
 }
