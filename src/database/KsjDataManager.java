@@ -31,16 +31,17 @@ import javax.xml.parsers.SAXParserFactory;
 
 import util.FixedPoint;
 
-import map.ksj.Area;
-import map.ksj.AreaCollection;
-import map.ksj.AreaInfo;
+import map.ksj.CityArea;
+import map.ksj.CityAreaCollection;
+import map.ksj.CityAreas;
+import map.ksj.CityInfo;
 import map.ksj.BusCollection;
 import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.GmlCurve;
 import map.ksj.GmlPolygon;
-import map.ksj.KsjPrefecture;
+import map.ksj.PrefectureCollection;
 import map.ksj.RailroadInfo;
 import map.ksj.RailroadSectionData;
 import map.ksj.RailwayCollection;
@@ -130,8 +131,8 @@ public class KsjDataManager {
 	/**
 	 * 行政区画(面)のポリゴンデータのファイル名
 	 */
-	private static final String CSV_AREA_INFO_FORMAT = 
-			"area" + File.separatorChar + "area_info_%02d.csv";
+	private static final String CSV_AREA_POLYGON_FORMAT = 
+			"area" + File.separatorChar + "area_polygon_%02d.csv";
 
 
 	private static final String[] KSJ_URL_FORMAT_LIST = { null, // 0
@@ -782,10 +783,37 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private List<AreaInfo> readAreaInfoCSV(int code) throws IOException {
-		List<AreaInfo> ret = new ArrayList<AreaInfo>();
+	private List<GmlPolygon> readPolygonCSV(int code) throws IOException {
+		List<GmlPolygon> ret = new ArrayList<GmlPolygon>();
 		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_AREA_INFO_FORMAT, code));
+				+ String.format(CSV_AREA_POLYGON_FORMAT, code));
+		if (file.isFile()) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+			try {
+				String line;
+				while ((line = in.readLine()) != null) {
+					String[] param = line.split(",");
+					int n = Integer.parseInt(param[0]);
+					int[] x = new int[n];
+					int[] y = new int[n];
+					for (int i = 0; i < n; i++) {
+						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
+						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
+					}
+					ret.add(new GmlPolygon(n, x, y));
+				}
+			} finally {
+				in.close();
+			}
+		}
+		return ret;
+	}
+	
+	private List<CityAreas> readAreasCSV(int code, List<GmlPolygon> polygons) throws IOException {
+
+		List<CityAreas> ret = new ArrayList<CityAreas>();
+		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+				+ String.format(CSV_AREA_FORMAT, code));
 		if (file.isFile()) {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
 			try {
@@ -797,37 +825,14 @@ public class KsjDataManager {
 					String sun = param.length > 2 ? param[2] : "";
 					String con = param.length > 3 ? param[3] : "";
 					String cn2 = param.length > 4 ? param[4] : "";
-					ret.add(new AreaInfo(prefCode, aac, sun, con, cn2));
-				}
-			} finally {
-				in.close();
-			}
-		}
-		return ret;
-	}
-	
-	private List<Area> readAreaCSV(int code, List<AreaInfo> infos) throws IOException {
+					CityInfo info = new CityInfo(prefCode, aac, sun, con, cn2);
 
-		List<Area> ret = new ArrayList<Area>();
-		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_AREA_FORMAT, code));
-		if (file.isFile()) {
-			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
-			try {
-				String line;
-				while ((line = in.readLine()) != null) {
-					String[] param = line.split(",");
-					int idxInfo = Integer.parseInt(param[0]);
-					AreaInfo info = infos.get(idxInfo);
-					int n = Integer.parseInt(param[1]);
-					int[] x = new int[n];
-					int[] y = new int[n];
-					for (int i = 0; i < n; i++) {
-						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
-						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 3]);
+					GmlPolygon[] ps = new GmlPolygon[param.length - 5];
+					for (int i = 5; i < param.length; i++) {
+						int idx = Integer.parseInt(param[i]);
+						ps[i - 5] = polygons.get(idx);
 					}
-					GmlPolygon polygon = new GmlPolygon(n, x, y);
-					ret.add(new Area(info, polygon));
+					ret.add(new CityAreas(info, ps));
 				}
 			} finally {
 				in.close();
@@ -836,31 +841,33 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private AreaCollection readAreaCollectionCSV(int code) {
-		AreaCollection ret = null;
+	private CityAreaCollection readAreaCollectionCSV(int code) {
+		CityAreaCollection ret = null;
 
 		try {
 			long t0 = System.currentTimeMillis();
 
-			List<AreaInfo> infos = readAreaInfoCSV(code);
-			if (infos.isEmpty())
-				return ret;
-
-			List<Area> areas = readAreaCSV(code, infos);
-			if (areas.isEmpty())
+			List<GmlPolygon> polygons = readPolygonCSV(code);
+			if (polygons.isEmpty())
 				return ret;
 			
-			ret = new AreaCollection(code, areas.toArray(new Area[areas.size()]));
+			List<CityAreas> areasList = readAreasCSV(code, polygons);
+			if (areasList.isEmpty())
+				return ret;
+
+			ret = new CityAreaCollection(code, areasList.toArray(new CityAreas[areasList.size()]));
 
 			System.out.printf("AREA(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
 		return ret;
 	}
 	
-	private void writeAreaCSV(AreaCollection data, Map<AreaInfo, Integer> infoMap, List<AreaInfo> infoList) throws IOException {
+	private void writeAreaCSV(CityAreaCollection data,
+			List<GmlPolygon> polygonList) throws IOException {
 
 		int code = data.getCode();
 		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
@@ -878,23 +885,56 @@ public class KsjDataManager {
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
 					tmpFile), CHARSET));
 			try {
-				for (Area area : data.getAreas()) {
-					GmlPolygon polygon = area.getPolygon();
+				for (CityAreas area : data.getCityAreas()) {
+
+					CityInfo info = area.getInfo();
+					out.write(String.format("%02d,%05d,%s,%s,%s", info.getCode(),
+							info.getAac(), info.getSun(), info.getCon(), info.getCn2()));
+
+					for (GmlPolygon polygon : area.getPolygons()) {
+						out.write(String.format(",%d", polygonList.size()));
+						polygonList.add(polygon);
+					}
+					out.newLine();
+					out.flush();
+
+				}
+			} finally {
+				out.close();
+			}
+			if (!tmpFile.renameTo(file)) {
+				throw new IllegalStateException("Failure of rename: " + tmpFile + " => " + file);
+			}
+		} catch (IOException e) {
+			if (tmpFile.isFile() && tmpFile.delete()) {
+				throw new IllegalStateException("Failure of delete: " + tmpFile);
+			}
+			throw e;
+		}
+	}
+
+	private void writePolygonCSV(int code, List<GmlPolygon> polygonList) throws IOException {
+		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+				+ String.format(CSV_AREA_POLYGON_FORMAT, code);
+		
+		File file = new File(path);
+		if (file.exists() && !file.delete()) {
+			throw new IllegalStateException("Failure of delete: " + file);
+		}
+		File tmpFile = new File(path + ".tmp");
+		try {
+			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
+				throw new IllegalStateException();
+			}
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
+					tmpFile), CHARSET));
+			try {
+				for (GmlPolygon polygon : polygonList) {
 					int n = polygon.getArrayLength();
 					int[] x = polygon.getArrayX();
 					int[] y = polygon.getArrayY();
-					AreaInfo info = area.getInfo();
-					Integer idx = infoMap.get(info);
-					if (idx == null) {
-						idx = infoList.size();
-						infoMap.put(info, idx);
-						infoList.add(info);
-					} else {
-						info = infoList.get(idx);
-						area.setInfo(info);
-					}
 					
-					out.write(String.format("%d,%d", idx, n));
+					out.write(String.format("%d", n));
 					for (int i = 0; i < n; i++) {
 						out.write(String.format(",%f,%f", FixedPoint.parseDouble(y[i]),
 								FixedPoint.parseDouble(x[i])));
@@ -916,58 +956,19 @@ public class KsjDataManager {
 		}
 	}
 
-	private void writeAreaInfoCSV(int code, List<AreaInfo> infoList) throws IOException {
-
-		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_AREA_INFO_FORMAT, code);
-		
-		File file = new File(path);
-		if (file.exists() && !file.delete()) {
-			throw new IllegalStateException("Failure of delete: " + file);
-		}
-		File tmpFile = new File(path + ".tmp");
-		try {
-			if (!tmpFile.getParentFile().isDirectory() && !tmpFile.getParentFile().mkdirs()) {
-				throw new IllegalStateException();
-			}
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
-					tmpFile), CHARSET));
-			try {
-				for (int i = 0; i < infoList.size(); i++) {
-					AreaInfo area = infoList.get(i);
-					out.write(String.format("%02d,%05d,%s,%s,%s", area.getCode(), area.getAac(), area.getSun(), area.getCon(), area.getCn2()));
-					out.newLine();
-					out.flush();
-				}
-			} finally {
-				out.close();
-			}
-			if (!tmpFile.renameTo(file)) {
-				throw new IllegalStateException("Failure of rename: " + tmpFile + " => " + file);
-			}
-		} catch (IOException e) {
-			if (tmpFile.isFile() && tmpFile.delete()) {
-				throw new IllegalStateException("Failure of delete: " + tmpFile);
-			}
-			throw e;
-		}
-	}
-
-	
-	private boolean writeAreaCollectionCSV(AreaCollection data) {
+	private boolean writeAreaCollectionCSV(CityAreaCollection data) {
 
 		boolean ret = false;
 		int code = data.getCode();
 
-		List<AreaInfo> infoList = new ArrayList<AreaInfo>();
-		Map<AreaInfo, Integer> infoMap = new HashMap<AreaInfo, Integer>();
+		List<GmlPolygon> polygonList = new ArrayList<GmlPolygon>();
 		
 		try {
 			// 1. Area
-			this.writeAreaCSV(data, infoMap, infoList);
+			this.writeAreaCSV(data, polygonList);
 			
-			// 2. Area Info
-			this.writeAreaInfoCSV(code, infoList);
+			// 3. Area Polygon
+			this.writePolygonCSV(code, polygonList);
 
 		} catch (IOException e) {
 			ret = false;
@@ -976,18 +977,18 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	public KsjPrefecture getPrefectureData(int code) {
-		AreaCollection area = getAreaCollection(code);
+	public PrefectureCollection getPrefectureData(int code) {
+		CityAreaCollection area = getAreaCollection(code);
 		BusCollection bus = getBusCollection(code);
-		return new KsjPrefecture(code, area.getAreas(), bus);
+		return new PrefectureCollection(code, area.getCityAreas(), bus);
 	}
 	
 	/**
 	 * @param code 都道府県コード
 	 * @return 行政区画(面)のデータ配列
 	 */
-	public AreaCollection getAreaCollection(int code) {
-		AreaCollection ret = this.readAreaCollectionCSV(code);
+	public CityAreaCollection getAreaCollection(int code) {
+		CityAreaCollection ret = this.readAreaCollectionCSV(code);
 		if (ret == null) {
 			long t0 = System.currentTimeMillis();
 			
@@ -1001,8 +1002,8 @@ public class KsjDataManager {
 	/**
 	 * @return 行政区画(面)のデータ配列
 	 */
-	public AreaCollection[] getAreaCollections() {
-		AreaCollection[] ret = new AreaCollection[47];
+	public CityAreaCollection[] getAreaCollections() {
+		CityAreaCollection[] ret = new CityAreaCollection[47];
 		for (int i = 1; i <= 47; i++) {
 			ret[i - 1] = this.getAreaCollection(i);
 		}
@@ -1013,11 +1014,11 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return 行政区画(面)のデータ配列
 	 */
-	public AreaCollection readAreaCollectionGML(int code) {
+	public CityAreaCollection readAreaCollectionGML(int code) {
 		long t0 = System.currentTimeMillis();
 
 		String name = String.format("%02d" + File.separatorChar + "N03-%02d.obj", code, code);
-		Area[] areas = this.readSerializable(name, Area[].class);
+		CityArea[] areas = this.readSerializable(name, CityArea[].class);
 		if (areas == null) {
 			this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
 			try {
@@ -1036,7 +1037,7 @@ public class KsjDataManager {
 				e.printStackTrace();
 			}
 		}
-		AreaCollection ret = new AreaCollection(code, areas);
+		CityAreaCollection ret = new CityAreaCollection(code, areas);
 		System.out.printf("N03 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
 		return ret;

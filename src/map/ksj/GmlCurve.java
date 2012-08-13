@@ -2,6 +2,9 @@ package map.ksj;
 
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 
@@ -15,6 +18,8 @@ public class GmlCurve implements Data, Serializable {
 	private int[] x;
 	private int[] y;
 	
+	private transient Rectangle bounds;
+	
 	public GmlCurve() {
 	}
 
@@ -27,8 +32,21 @@ public class GmlCurve implements Data, Serializable {
 			this.x[i] = points[i].x;
 			this.y[i] = points[i].y;
 		}
+		initBounds();
 	}
-
+	
+	private void initBounds() {
+		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+		int maxX = 0, maxY = 0;
+		for (int i = 0; i < this.n; i++) {
+			if (minX > this.x[i]) minX = this.x[i];
+			if (maxX < this.x[i]) maxX = this.x[i];
+			if (minY > this.y[i]) minY = this.y[i];
+			if (maxY < this.y[i]) maxY = this.y[i];
+		}
+		this.bounds = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+	}
+	
 	public int[] getArrayX() {
 		return this.x;
 	}
@@ -64,6 +82,7 @@ public class GmlCurve implements Data, Serializable {
 				this.x[i] = points[i].x;
 				this.y[i] = points[i].y;
 			}
+			initBounds();
 		}
 	}
 
@@ -86,6 +105,10 @@ public class GmlCurve implements Data, Serializable {
 		return ret;
 	}
 
+	public Rectangle getBounds() {
+		return this.bounds;
+	}
+	
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("pts: ");
@@ -102,5 +125,10 @@ public class GmlCurve implements Data, Serializable {
 	@Override
 	public int hashCode() {
 		return this.x[0] + this.y[0] + this.x[this.n - 1] + this.y[this.n - 1];
+	}
+	
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+		in.defaultReadObject();
+		initBounds();
 	}
 }

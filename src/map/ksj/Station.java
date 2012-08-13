@@ -1,6 +1,7 @@
 package map.ksj;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.io.Serializable;
 
 public class Station implements Data, RailroadSection, Serializable {
@@ -100,6 +101,11 @@ public class Station implements Data, RailroadSection, Serializable {
 	@Override
 	public void draw(Graphics2D g) {
 		this.curve.draw(g);
+	}
+
+	@Override
+	public Rectangle getBounds() {
+		return this.curve.getBounds();
 	}
 
 }

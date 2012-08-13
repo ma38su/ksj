@@ -9,25 +9,25 @@ import java.io.Serializable;
  * @author fujiwara
  *
  */
-public class Area implements Data, Serializable {
+public class CityArea implements Data, Serializable {
 
 	private GmlPolygon polygon;
-	private AreaInfo info;
+	private CityInfo info;
 
-	public Area() {
-		this.info = new AreaInfo();
+	public CityArea() {
+		this.info = new CityInfo();
 	}
 	
-	public Area(AreaInfo info, GmlPolygon polygon) {
+	public CityArea(CityInfo info, GmlPolygon polygon) {
 		this.info = info;
 		this.polygon = polygon;
 	}
 	
-	public AreaInfo getInfo() {
+	public CityInfo getInfo() {
 		return this.info;
 	}
 	
-	public void setInfo(AreaInfo info) {
+	public void setInfo(CityInfo info) {
 		this.info = info;
 	}
 	
@@ -73,8 +73,8 @@ public class Area implements Data, Serializable {
 	@Override
 	public boolean equals(Object obj) {
 		boolean ret = false;
-		if (obj instanceof Area) {
-			Area area = (Area) obj;
+		if (obj instanceof CityArea) {
+			CityArea area = (CityArea) obj;
 			ret = this.polygon.equals(area.polygon) && this.info.equals(area.info);
 		}
 		return ret;

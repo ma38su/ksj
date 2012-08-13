@@ -1,6 +1,7 @@
 package map.ksj;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 
 public interface RailroadSection {
 
@@ -13,5 +14,7 @@ public interface RailroadSection {
 	public void setCurve(GmlCurve curve);
 
 	public void draw(Graphics2D g);
+	
+	public Rectangle getBounds();
 	
 }

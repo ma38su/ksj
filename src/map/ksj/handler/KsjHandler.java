@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import map.ksj.Area;
+import map.ksj.CityArea;
 import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
@@ -46,7 +46,7 @@ public class KsjHandler extends DefaultHandler {
 		this.classMap.put("ksj:BusRoute", BusRoute.class);
 		this.classMap.put("ksj:RailroadSection", RailroadSectionData.class);
 		this.classMap.put("ksj:Station", Station.class);
-		this.classMap.put("ksj:AdministrativeArea", Area.class);
+		this.classMap.put("ksj:AdministrativeArea", CityArea.class);
 
 		this.charactersTarget.add("gml:posList");
 		this.charactersTarget.add("ksj:opc");
