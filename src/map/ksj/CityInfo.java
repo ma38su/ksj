@@ -1,27 +1,25 @@
 package map.ksj;
 
-import java.io.Serializable;
-
 /**
  * 行政区画の情報
  * 
  * @author fujiwara
  *
  */
-public class CityInfo implements Serializable {
+public class CityInfo {
 	
 	/**
 	 * 都道府県名
 	 */
 	public static final String[] PREF_NAME = new String[]{
-			"",
-			"北海道",
-			"青森県",
-			"岩手県",
-			"宮城県",
-			"秋田県",
-			"山形県",
-			"福島県",
+			"",			// 0
+			"北海道",	// 1
+			"青森県",	// 2
+			"岩手県",	// 3
+			"宮城県",	// 4
+			"秋田県",	// 5
+			"山形県",	// 6
+			"福島県",	// 7
 			"茨城県",
 			"栃木県",
 			"群馬県",

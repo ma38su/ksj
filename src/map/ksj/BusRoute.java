@@ -1,13 +1,12 @@
 package map.ksj;
 
 import java.awt.Graphics2D;
-import java.io.Serializable;
 
 /**
  * バスルートのクラス
  * @author fujiwara
  */
-public class BusRoute implements Data, Serializable {
+public class BusRoute implements Data {
 
 	public BusRoute() {
 		this.info = new BusRouteInfo();

@@ -3,9 +3,6 @@ package map.ksj;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Rectangle;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -14,7 +11,7 @@ import java.util.Arrays;
  * @author fujiwara
  *
  */
-public class CityAreas implements Serializable {
+public class CityAreas {
 
 	private Polygon[] polygons;
 	private CityInfo info;
@@ -97,10 +94,5 @@ public class CityAreas implements Serializable {
 			ret = this.info.equals(area.info) && Arrays.equals(this.polygons, area.polygons);
 		}
 		return ret;
-	}
-	
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-		initBounds();
 	}
 }

@@ -1,8 +1,6 @@
 package map.ksj;
 
-import java.io.Serializable;
-
-public class RailroadInfo implements Serializable {
+public class RailroadInfo {
 
 	private String line;
 	private String company;

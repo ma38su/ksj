@@ -2,9 +2,8 @@ package map.ksj;
 
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.io.Serializable;
 
-public class Station implements Data, RailroadSection, Serializable {
+public class Station implements Data, RailroadSection {
 
 	/**
 	 * 駅名

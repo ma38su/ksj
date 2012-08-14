@@ -16,7 +16,7 @@ import map.ksj.BusStop;
 import map.ksj.Data;
 import map.ksj.GmlCurve;
 import map.ksj.GmlPoint;
-import map.ksj.GmlPolygon;
+import map.ksj.GmlPolygons;
 import map.ksj.RailroadSectionData;
 import map.ksj.Station;
 
@@ -40,7 +40,7 @@ public class KsjHandler extends DefaultHandler {
 
 		this.classMap.put("gml:Curve", GmlCurve.class);
 		this.classMap.put("gml:Point", GmlPoint.class);
-		this.classMap.put("gml:Surface", GmlPolygon.class);
+		this.classMap.put("gml:Surface", GmlPolygons.class);
 		this.classMap.put("ksj:BusStop", BusStop.class);
 		this.classMap.put("ksj:busRouteInformation", BusRouteInfo.class);
 		this.classMap.put("ksj:BusRoute", BusRoute.class);

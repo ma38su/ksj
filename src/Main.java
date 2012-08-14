@@ -12,8 +12,9 @@ public class Main {
 				".data"+File.separatorChar+"csv"
 		);
 
-		mgr.getAreaCollections();
 		mgr.getBusCollections();
+		mgr.getAreaCollections();
+		mgr.getRailwayCollection();
 
 		/*
 		for (int code = 1; code <= 47; ++code) {
@@ -21,7 +22,6 @@ public class Main {
 		}
 		*/
 
-		mgr.getRailwayCollection();
 
 	}
 }

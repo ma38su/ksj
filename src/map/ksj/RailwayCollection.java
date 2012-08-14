@@ -1,8 +1,6 @@
 package map.ksj;
 
-import java.io.Serializable;
-
-public class RailwayCollection implements Serializable {
+public class RailwayCollection {
 
 	private final RailroadSectionData[] sections;
 	private final Station[] stations;

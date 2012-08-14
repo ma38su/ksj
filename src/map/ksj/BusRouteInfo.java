@@ -1,12 +1,10 @@
 package map.ksj;
 
-import java.io.Serializable;
-
 /**
  * バス路線情報のクラス
  * @author fujiwara
  */
-public class BusRouteInfo implements Data, Serializable {
+public class BusRouteInfo implements Data {
 
 	private static int count = 0;
 	

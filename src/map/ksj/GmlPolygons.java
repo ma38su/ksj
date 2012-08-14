@@ -4,7 +4,6 @@ import java.awt.Polygon;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.PathIterator;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -14,7 +13,7 @@ import java.util.List;
  * 曲線型
  * @author fujiwara
  */
-public class GmlPolygon extends Polygon implements Data, Serializable {
+public class GmlPolygons implements Data {
 	
 	/**
 	 * 座標系を量子化してポリゴンを圧縮する
@@ -143,15 +142,17 @@ public class GmlPolygon extends Polygon implements Data, Serializable {
 		}
 		return list;
 	}
+
+	private List<Polygon> polygons;
 	
-	public GmlPolygon() {
-		super();
+	public GmlPolygons() {
+		this.polygons = new ArrayList<Polygon>();
+	}
+	
+	public List<Polygon> getPolygons() {
+		return this.polygons;
 	}
 
-	public GmlPolygon(int n, int[] x, int[] y) {
-		super(x, y, n);
-	}
-	
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlCurve) {
 			GmlCurve curve = (GmlCurve) obj;
@@ -168,24 +169,47 @@ public class GmlPolygon extends Polygon implements Data, Serializable {
 				newX[i] = x[i];
 				newY[i] = y[i];
 			}
-			
-			this.xpoints = newX;
-			this.ypoints = newY;
-			this.npoints = newN;
+
+			this.polygons.add(new Polygon(newX, newY, newN));
 		}
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
 		boolean ret = this == obj;
-		if (!ret && obj instanceof Polygon) {
-			Polygon polygon = (Polygon) obj;
-			ret = (Arrays.equals(this.xpoints, polygon.xpoints) && Arrays.equals(this.ypoints, polygon.ypoints)) ||
-					(Arrays.equals(this.xpoints, reverseArray(polygon.xpoints)) && Arrays.equals(this.ypoints, reverseArray(polygon.ypoints)));
+		if (!ret && obj instanceof GmlPolygons) {
+			GmlPolygons gml = (GmlPolygons) obj;
+			ret = equalsPolygons(this.polygons, gml.polygons);
 		}
 		return ret;
 	}
 	
+	private static boolean equalsPolygons(List<Polygon> ps1, List<Polygon> ps2) {
+		boolean ret = ps1.size() == ps2.size();
+		if (ret) {
+			int size = ps1.size();
+			for (int i = 0; i < size; i++) {
+				Polygon p1 = ps1.get(i);
+				Polygon p2 = ps2.get(i);
+				ret &= equalsPolygon(p1, p2);
+			}
+			if (ret) return ret;
+			ret = true;
+			for (int i = 0; i < size; i++) {
+				Polygon p1 = ps1.get(i);
+				Polygon p2 = ps2.get(size - 1 - i);
+				ret &= equalsPolygon(p1, p2);
+			}
+		}
+		return ret;
+	}
+	
+	private static boolean equalsPolygon(Polygon p1, Polygon p2) {
+		return p1.npoints == p2.npoints &&
+				((Arrays.equals(p1.xpoints, p2.xpoints) && Arrays.equals(p1.ypoints, p2.ypoints)) ||
+				(Arrays.equals(p1.xpoints, reverseArray(p2.xpoints)) && Arrays.equals(p1.ypoints, reverseArray(p2.ypoints))));
+	}
+
 	private static int[] reverseArray(int[] ary) {
 		int[] ret = new int[ary.length];
 		for (int i = 0; i < ret.length; i++) {
@@ -195,93 +219,12 @@ public class GmlPolygon extends Polygon implements Data, Serializable {
 	}
 
 	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder("pts: ");
-		for (int i = 0; i < this.npoints; i++) {
-			sb.append('[');
-			sb.append(this.xpoints[i]);
-			sb.append(", ");
-			sb.append(this.ypoints[i]);
-			sb.append("], ");
-		}
-		return "points: "+ sb.toString();
-	}
-	
-	public Polygon join(Polygon polygon) {
-		int i = 0;
-		int j = 0;
-		while (i < this.npoints) {
-			while (j < polygon.npoints) {
-				if (this.xpoints[i] == polygon.xpoints[j] && this.ypoints[i] == polygon.ypoints[j]) {
-					int k = 1;
-					while (i + k < this.npoints && j + k < this.npoints && this.xpoints[i + k] == polygon.xpoints[j + k] && this.ypoints[i + k] == polygon.ypoints[j + k]) k++;
-					if (k > 1) {
-						int n = this.npoints + polygon.npoints - k;
-						int[] x = new int[n];
-						int[] y = new int[n];
-						for (int l = 0; l < i; l++) {
-							x[l] = this.xpoints[l];
-							y[l] = this.ypoints[l];
-						}
-						for (int l = 0; l < polygon.npoints; l++) {
-							x[l + i] = polygon.xpoints[(j + l) % polygon.npoints];
-							y[l + i] = polygon.ypoints[(j + l) % polygon.npoints];
-						}
-						for (int l = i + k; l < this.npoints; l++) {
-							x[l + polygon.npoints - k] = this.xpoints[l];
-							y[l + polygon.npoints - k] = this.ypoints[l];
-						}
-						return new Polygon(x, y, n);
-					}
-					while (i + k < this.npoints && j - k >= 0 && this.xpoints[i + k] == polygon.xpoints[j - k] && this.ypoints[i + k] == polygon.ypoints[j - k]) k++;
-					if (k > 1) {
-						int n = this.npoints + polygon.npoints - k;
-						int[] x = new int[n];
-						int[] y = new int[n];
-						for (int l = 0; l < i; l++) {
-							x[l] = this.xpoints[l];
-							y[l] = this.ypoints[l];
-						}
-						for (int l = 0; l < polygon.npoints; l++) {
-							x[l + i] = polygon.xpoints[(j - l) % polygon.npoints];
-							y[l + i] = polygon.ypoints[(j - l) % polygon.npoints];
-						}
-						for (int l = i + k; l < this.npoints; l++) {
-							x[l + polygon.npoints - k] = this.xpoints[l];
-							y[l + polygon.npoints - k] = this.ypoints[l];
-						}
-						return new Polygon(x, y, n);
-					}
-					while (i - k < this.npoints && j + k >= 0 && this.xpoints[i - k] == polygon.xpoints[j + k] && this.ypoints[i - k] == polygon.ypoints[j + k]) k++;
-					if (k > 1) {
-						int n = this.npoints + polygon.npoints - k;
-						int[] x = new int[n];
-						int[] y = new int[n];
-						for (int l = 0; l <= i - k; l++) {
-							x[l] = this.xpoints[l];
-							y[l] = this.ypoints[l];
-						}
-						for (int l = 0; l < polygon.npoints; l++) {
-							x[l + i - k + 1] = this.xpoints[(j + l) % polygon.npoints];
-							y[l + i - k + 1] = this.ypoints[(j + l) % polygon.npoints];
-						}
-						for (int l = i + 1; l < this.npoints; l++) {
-							x[l + polygon.npoints - k] = this.xpoints[l];
-							y[l + polygon.npoints - k] = this.ypoints[l];
-						}
-						return new Polygon(x, y, n);
-					}
-				}
-				j++;
-			}
-			i++;
-		}
-		return null;
-	}
-
-	@Override
 	public int hashCode() {
-		return this.xpoints[0] + this.ypoints[0] + this.xpoints[this.npoints - 1] + this.ypoints[this.npoints - 1];
+		int ret = 0;
+		for (Polygon p : this.polygons) {
+			ret += (p.xpoints[0] + p.ypoints[0] + p.xpoints[p.npoints - 1] + p.ypoints[p.npoints - 1]);
+		}
+		return ret;
 	}
 	
 }

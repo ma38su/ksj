@@ -1,7 +1,6 @@
 package map.ksj;
 
 import java.awt.Polygon;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -12,7 +11,7 @@ import java.util.Map;
  * 都道府県の行政区画(面)
  * @author fujiwara
  */
-public class CityAreaCollection implements Serializable {
+public class CityAreaCollection {
 
 	private int code;
 	private Polygon[] polygons;
@@ -36,7 +35,7 @@ public class CityAreaCollection implements Serializable {
 				areaList = new ArrayList<Polygon>();
 				map.put(info, areaList);
 			}
-			areaList.add(area.getPolygon());
+			areaList.addAll(area.getPolygons());
 		}
 		List<CityAreas> areasList = new ArrayList<CityAreas>();
 		for (Map.Entry<CityInfo, List<Polygon>> entry : map.entrySet()) {
@@ -55,7 +54,7 @@ public class CityAreaCollection implements Serializable {
 		for (CityAreas a : this.areas) {
 			polygons.addAll(Arrays.asList(a.getPolygons()));
 		}
-		List<Polygon> newPolygons = GmlPolygon.getOpt(polygons);
+		List<Polygon> newPolygons = GmlPolygons.getOpt(polygons);
 		this.polygons = newPolygons.toArray(new Polygon[newPolygons.size()]);
 		System.out.printf("%d polygon: %dms\n", this.code, (System.currentTimeMillis() - t0));
 	}

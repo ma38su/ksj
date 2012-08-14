@@ -38,6 +38,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import util.FixedPoint;
+import util.GeneralFileFilter;
 
 import map.ksj.CityArea;
 import map.ksj.CityAreaCollection;
@@ -310,6 +311,8 @@ public class KsjDataManager {
 	private static boolean download(URL url, File file) {
 		boolean ret = true;
 		try {
+			File tmp = new File(file.getPath() + ".tmp");
+
 			URLConnection connect = url.openConnection();
 			InputStream in = connect.getInputStream();
 			try {
@@ -319,7 +322,7 @@ public class KsjDataManager {
 					if (!file.getParentFile().isDirectory()) {
 						file.getParentFile().mkdirs();
 					}
-					OutputStream out = new BufferedOutputStream(new FileOutputStream(file));
+					OutputStream out = new BufferedOutputStream(new FileOutputStream(tmp));
 					try {
 						copy(in, out);
 					} finally {
@@ -328,6 +331,9 @@ public class KsjDataManager {
 				}
 			} finally {
 				in.close();
+			}
+			if (!tmp.renameTo(file)) {
+				throw new IllegalStateException();
 			}
 		} catch (IOException e) {
 			ret = false;
@@ -362,8 +368,8 @@ public class KsjDataManager {
 	 * 圧縮ファイルを展開します。
 	 * 
 	 * @param zip 展開するファイル
-	 * @param dir 展開するディレクトリ
-	 * @param filter ファイルフィルター
+	 * @param dir 展開先ディレクトリ
+	 * @param filter 展開対象を絞り込むためのフィルター
 	 * @return 展開したファイル配列
 	 * @throws IOException 入出力エラー
 	 */
@@ -435,21 +441,21 @@ public class KsjDataManager {
 	}
 
 	public File[] getKsjFile(final int type) {
-		File zip = new File(this.orgDir + File.separatorChar + KSJ_TYPE_FORMAT[type] + ".zip");
+		File zip = new File(this.orgDir + File.separatorChar + "all"+ File.separatorChar + KSJ_TYPE_FORMAT[type] + ".zip");
 		File dir = zip.getParentFile();
 		if (!dir.isDirectory() && !dir.mkdirs()) {
 			throw new IllegalStateException();
 		}
 		File[] ret = null;
 		FileFilter filter = new FileFilter() {
-			String regexFile = KSJ_TYPE_FORMAT[type] + "-\\d+\\.xml";
+			String regexFile = KSJ_TYPE_FORMAT[type] + "-\\d+\\.xml(?:\\.gz)?";
 			@Override
 			public boolean accept(File pathname) {
 				return pathname.getName().matches(regexFile) || pathname.getName().endsWith("GML");
 			}
 		};
 		try {
-			if (zip.exists() || !hasExtracted(dir, filter)) {
+			if (!hasExtracted(dir, filter)) {
 				/*
 				 * 圧縮ファイルが残っている or ディレクトリが存在しない or ディレクトリ内のファイルが存在しない or
 				 * ディレクトリの内容が正確でない（チェックできてない）
@@ -484,11 +490,13 @@ public class KsjDataManager {
 					throw new IllegalStateException();
 				}
 			}
-			File[] listFiles = dir.listFiles(filter);
+			File[] listFiles = dir.listFiles(new GeneralFileFilter("xml"));
 			File[] zipFiles = new File[listFiles.length];
 			for (int i = 0; i < listFiles.length; i++) {
 				File file = listFiles[i];
-				zipFiles[i] = gzip(file);
+				if (file.isFile()) {
+					zipFiles[i] = gzip(file);
+				}
 			}
 			ret = zipFiles;
 		} catch (MalformedURLException e) {
@@ -514,15 +522,14 @@ public class KsjDataManager {
 		File[] ret = null;
 		FileFilter filter = new FileFilter() {
 			String regexFile = String.format(
-					KSJ_TYPE_FORMAT[type] + "-(?:\\d+_)?%02d(?:.+)?\\.xml", code);
-
+					KSJ_TYPE_FORMAT[type] + "-(?:\\d+_)?%02d(?:.+)?\\.xml(:?\\.gz)?", code);
 			@Override
 			public boolean accept(File pathname) {
 				return pathname.getName().matches(regexFile) || pathname.getName().endsWith("GML");
 			}
 		};
 		try {
-			if (zip.exists() || !hasExtracted(dir, filter)) {
+			if (!hasExtracted(dir, filter)) {
 				/*
 				 * 圧縮ファイルが残っている or ディレクトリが存在しない or ディレクトリ内のファイルが存在しない or
 				 * ディレクトリの内容が正確でない（チェックできてない）
@@ -548,8 +555,9 @@ public class KsjDataManager {
 									throw new IllegalSelectorException();
 								}
 							}
-							if (!parent.delete())
+							if (!parent.delete()) {
 								throw new IllegalStateException();
+							}
 						}
 					}
 				}
@@ -557,7 +565,7 @@ public class KsjDataManager {
 					throw new IllegalStateException();
 				}
 			}
-			File[] listFiles = dir.listFiles(filter);
+			File[] listFiles = dir.listFiles(new GeneralFileFilter("xml"));
 			File[] zipFiles = new File[listFiles.length];
 			for (int i = 0; i < listFiles.length; i++) {
 				File file = listFiles[i];
@@ -840,9 +848,9 @@ public class KsjDataManager {
 		this.getKsjFile(TYPE_RAILWAY);
 		try {
 			SAXParser parser = this.factory.newSAXParser();
-			File file = new File(this.orgDir + File.separatorChar + "N02-11.xml");
+			File file = new File(this.orgDir + File.separatorChar + "all" + File.separatorChar + "N02-11.xml.gz");
 			HandlerN02 handler = new HandlerN02();
-			parser.parse(file, handler);
+			parser.parse(new GZIPInputStream(new FileInputStream(file)), handler);
 
 			Station[] stations = handler.getStations();
 			RailroadSectionData[] sections = handler.getRailroadSections();
@@ -1332,7 +1340,7 @@ public class KsjDataManager {
 
 		BusStop[] ret = null;
 		File file = new File(this.orgDir + File.separatorChar
-				+ String.format("%02d" + File.separatorChar + "P11-10_%02d-jgd-g.xml",
+				+ String.format("%02d" + File.separatorChar + "P11-10_%02d-jgd-g.xml.gz",
 						code, code));
 
 		this.getKsjFile(TYPE_BUS_STOP, code);
@@ -1360,11 +1368,12 @@ public class KsjDataManager {
 		long t0 = System.currentTimeMillis();
 
 		BusRoute[] ret = null;
-		this.getKsjFile(TYPE_BUS_ROUTE, code);
 		File file = new File(
 				this.orgDir + File.separatorChar +
 				String.format("%02d" + File.separatorChar + "N07-11_%02d.xml.gz",
 								code, code));
+
+		this.getKsjFile(TYPE_BUS_ROUTE, code);
 		try {
 			SAXParser parser = this.factory.newSAXParser();
 

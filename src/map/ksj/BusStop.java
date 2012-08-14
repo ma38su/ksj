@@ -1,6 +1,5 @@
 package map.ksj;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +7,7 @@ import java.util.List;
  * バス停留所のクラス
  * @author fujiwara
  */
-public class BusStop implements Data, Serializable {
+public class BusStop implements Data {
 
 	/**
 	 * バス路線情報

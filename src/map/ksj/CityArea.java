@@ -1,7 +1,8 @@
 package map.ksj;
 
-import java.awt.Graphics2D;
-import java.io.Serializable;
+import java.awt.Polygon;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 行政区画(面)
@@ -9,20 +10,16 @@ import java.io.Serializable;
  * @author fujiwara
  *
  */
-public class CityArea implements Data, Serializable {
+public class CityArea implements Data {
 
-	private GmlPolygon polygon;
+	private List<Polygon> polygons;
 	private CityInfo info;
 
 	public CityArea() {
 		this.info = new CityInfo();
+		this.polygons = new ArrayList<Polygon>();
 	}
-	
-	public CityArea(CityInfo info, GmlPolygon polygon) {
-		this.info = info;
-		this.polygon = polygon;
-	}
-	
+
 	public CityInfo getInfo() {
 		return this.info;
 	}
@@ -31,23 +28,16 @@ public class CityArea implements Data, Serializable {
 		this.info = info;
 	}
 	
-	public GmlPolygon getPolygon() {
-		return this.polygon;
+	public List<Polygon> getPolygons() {
+		return this.polygons;
 	}
 
-	public void draw(Graphics2D g) {
-		g.drawPolygon(this.polygon);
-	}
-	
-	public void fill(Graphics2D g) {
-		g.fillPolygon(this.polygon);
-	}
-	
 	@Override
 	public void link(String tag, Object obj) {
-		if (obj instanceof GmlPolygon) {
+		if (obj instanceof GmlPolygons) {
 			assert("ksj:are".equals(tag));
-			this.polygon = (GmlPolygon) obj;
+			GmlPolygons gml = (GmlPolygons) obj;
+			this.polygons.addAll(gml.getPolygons());
 		} else if (obj instanceof String) {
 			String string = (String) obj;
 			if ("ksj:prn".equals(tag)) {
@@ -67,7 +57,7 @@ public class CityArea implements Data, Serializable {
 
 	@Override
 	public int hashCode() {
-		return this.polygon.hashCode() + this.info.hashCode();
+		return this.info.hashCode();
 	}
 
 	@Override
@@ -75,7 +65,7 @@ public class CityArea implements Data, Serializable {
 		boolean ret = false;
 		if (obj instanceof CityArea) {
 			CityArea area = (CityArea) obj;
-			ret = this.polygon.equals(area.polygon) && this.info.equals(area.info);
+			ret = this.info.equals(area.info) && this.polygons.equals(area.polygons);
 		}
 		return ret;
 	}
