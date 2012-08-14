@@ -29,6 +29,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -176,35 +178,111 @@ public class KsjDataManager {
 
 	private static final String KSJ_URL_BASE = "http://nlftp.mlit.go.jp/ksj/gml/data/";
 
-	private final SAXParserFactory factory;
-
-	/**
-	 * オリジナルファイルの保存フォルダ
-	 */
-	private final String orgDir;
-
-	/**
-	 * CSVファイルの保存ディレクトリ
-	 */
-	private String csvDir;
-
-	/**
-	 * シリアライズファイルの保存ディレクトリ
-	 */
-	private String serializeDir;
-
-	/**
-	 * @param orgDir オリジナルファイルの格納ディレクトリ
-	 * @param csvDir CSVファイルの格納ディレクトリ
-	 * @param serializeDir シリアライズファイルの格納ディレクトリ
-	 */
-	public KsjDataManager(String orgDir, String csvDir, String serializeDir) {
-		this.orgDir = orgDir;
-		this.csvDir = csvDir;
-		this.serializeDir = serializeDir;
-		this.factory = SAXParserFactory.newInstance();
+	private static File gzip(File file) {
+		File ret = null;
+		try {
+			String gzipPath = file.getPath() + ".gz";
+			String tmpPath = file.getPath() + ".gz.tmp";
+			File gzipFile = new File(gzipPath);
+			OutputStream out = new GZIPOutputStream(new FileOutputStream(tmpPath));
+			try {
+				InputStream in = new FileInputStream(file);
+				try {
+					copy(in, out);
+				} finally {
+					in.close();
+				}
+			} finally {
+				out.close();
+			}
+			if (new File(tmpPath).renameTo(gzipFile)) {
+				ret = gzipFile;
+				if (!file.delete()) {
+					System.out.println(file + " => "+ tmpPath);
+					throw new IllegalStateException();
+				}
+			}
+		} catch (IOException e) {
+			ret = null;
+			e.printStackTrace();
+		}
+		return ret;
 	}
 
+	/**
+	 * オブジェクトを直列化してファイルに保存します。 衝突を避けるため.tmpファイルに保存後、リネームします。
+	 * 
+	 * @param path 保存ファイルパス
+	 * @param obj シリアライズ可能なオブジェクト
+	 * @return 保存の成否
+	 */
+	public static boolean writeSerializable(String path, Object obj) {
+		boolean ret = false;
+		File file = new File(path + ".tmp");
+		if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
+			return false;
+		}
+		try {
+			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
+			try {
+				out.writeObject(obj);
+				out.flush();
+			} finally {
+				out.close();
+			}
+			if (!file.renameTo(new File(path))) {
+				if (!file.delete()) {
+					throw new IllegalStateException("Failure of delete: " + file);
+				}
+				return ret;
+			}
+		} catch (Exception e) {
+			ret = false;
+			e.printStackTrace();
+			if (file.isFile() && !file.delete()) {
+				throw new IllegalStateException("Failure of delete: " + file);
+			}
+			File file2 = new File(path);
+			if (file2.isFile() && !file2.delete()) {
+				throw new IllegalStateException("Failure of delete: " + file);
+			}
+		}
+		return ret;
+	}
+
+	/**
+	 * ファイルから直列化して保存されたオブジェクトを読み込みます。
+	 * 
+	 * @param path ファイルパス
+	 * @param c 読み込むクラス
+	 * @return 読み込んだオブジェクトのインスタンス
+	 */
+	public static <T> T readSerializable(String path, Class<T> c) {
+		T ret = null;
+		File file = new File(path);
+		if (file.isFile()) {
+			try {
+				ObjectInputStream in = null;
+				try {
+					in = new ObjectInputStream(new FileInputStream(file));
+					Object obj = in.readObject();
+					ret = c.cast(obj);
+				} finally {
+					if (in != null) {
+						in.close();
+					}
+				}
+			} catch (Exception e) {
+				System.err.println(e.getClass().getName() +": "+ e.getMessage());
+				ret = null;
+				if (file.isFile() && !file.delete()) {
+					throw new IllegalStateException("Failure of delete: " + file);
+				}
+			}
+		}
+		return ret;
+	}
+	
 	/**
 	 * ファイルのコピーを行います。 入出力のストリームは閉じないので注意が必要です。
 	 * 
@@ -212,7 +290,7 @@ public class KsjDataManager {
 	 * @param out 出力ストリーム
 	 * @throws IOException 入出力エラー
 	 */
-	private void copy(InputStream in, OutputStream out) throws IOException {
+	private static void copy(InputStream in, OutputStream out) throws IOException {
 		final byte buf[] = new byte[1024];
 		int size;
 		while ((size = in.read(buf)) != -1) {
@@ -229,7 +307,7 @@ public class KsjDataManager {
 	 * @return ダウンロードできればtrue
 	 * @throws IOException 入出力エラー
 	 */
-	private boolean download(URL url, File file) {
+	private static boolean download(URL url, File file) {
 		boolean ret = true;
 		try {
 			URLConnection connect = url.openConnection();
@@ -243,7 +321,7 @@ public class KsjDataManager {
 					}
 					OutputStream out = new BufferedOutputStream(new FileOutputStream(file));
 					try {
-						this.copy(in, out);
+						copy(in, out);
 					} finally {
 						out.close();
 					}
@@ -257,6 +335,29 @@ public class KsjDataManager {
 		return ret;
 	}
 
+	private final SAXParserFactory factory;
+
+	/**
+	 * オリジナルファイルの保存フォルダ
+	 */
+	private final String orgDir;
+
+	/**
+	 * CSVファイルの保存ディレクトリ
+	 */
+	private String csvDir;
+
+	/**
+	 * @param orgDir オリジナルファイルの格納ディレクトリ
+	 * @param csvDir CSVファイルの格納ディレクトリ
+	 * @param serializeDir シリアライズファイルの格納ディレクトリ
+	 */
+	public KsjDataManager(String orgDir, String csvDir) {
+		this.orgDir = orgDir;
+		this.csvDir = csvDir;
+		this.factory = SAXParserFactory.newInstance();
+	}
+	
 	/**
 	 * 圧縮ファイルを展開します。
 	 * 
@@ -266,7 +367,7 @@ public class KsjDataManager {
 	 * @return 展開したファイル配列
 	 * @throws IOException 入出力エラー
 	 */
-	private List<File> extractZip(File zip, File dir, FileFilter filter) {
+	private List<File> unzip(File zip, File dir, FileFilter filter) {
 		List<File> extracted = new ArrayList<File>();
 		try {
 			ZipInputStream in = new ZipInputStream(new FileInputStream(zip));
@@ -292,7 +393,7 @@ public class KsjDataManager {
 								FileOutputStream out = null;
 								try {
 									out = new FileOutputStream(outFile);
-									this.copy(in, out);
+									copy(in, out);
 								} finally {
 									if (out != null) {
 										out.close();
@@ -342,7 +443,6 @@ public class KsjDataManager {
 		File[] ret = null;
 		FileFilter filter = new FileFilter() {
 			String regexFile = KSJ_TYPE_FORMAT[type] + "-\\d+\\.xml";
-
 			@Override
 			public boolean accept(File pathname) {
 				return pathname.getName().matches(regexFile) || pathname.getName().endsWith("GML");
@@ -357,15 +457,15 @@ public class KsjDataManager {
 				URL url = new URL(KSJ_URL_BASE + KSJ_URL_FORMAT_LIST[type]);
 				long t0 = System.currentTimeMillis();
 				System.out.printf("DL: %s ...\n", url.getPath());
-				if (!this.download(url, zip))
+				if (!download(url, zip))
 					return null;
 				System.out.printf("DL: %s / %dms\n", url.getPath(), (System.currentTimeMillis() - t0));
 			}
 			if (zip.exists()) {
 				// ファイルの展開
 				long t0 = System.currentTimeMillis();
-				List<File> extracted = this.extractZip(zip, dir, filter);
-				System.out.printf("Extract: %s / %dms\n", zip.getName(), (System.currentTimeMillis() - t0));
+				List<File> extracted = this.unzip(zip, dir, filter);
+				System.out.printf("unzip: %s / %dms\n", zip.getName(), (System.currentTimeMillis() - t0));
 				for (File file : extracted) {
 					if (file.exists()) {
 						File parent = file.getParentFile();
@@ -384,7 +484,13 @@ public class KsjDataManager {
 					throw new IllegalStateException();
 				}
 			}
-			ret = dir.listFiles(filter);
+			File[] listFiles = dir.listFiles(filter);
+			File[] zipFiles = new File[listFiles.length];
+			for (int i = 0; i < listFiles.length; i++) {
+				File file = listFiles[i];
+				zipFiles[i] = gzip(file);
+			}
+			ret = zipFiles;
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
@@ -424,15 +530,15 @@ public class KsjDataManager {
 				URL url = new URL(KSJ_URL_BASE + String.format(KSJ_URL_FORMAT_LIST[type], code));
 				long t0 = System.currentTimeMillis();
 				System.out.printf("DL: %s ...\n", url.getPath());
-				if (!this.download(url, zip))
+				if (!download(url, zip))
 					return null;
 				System.out.printf("DL: %s / %dms\n", url.getPath(), (System.currentTimeMillis() - t0));
 			}
 			if (zip.exists()) {
 				// ファイルの展開
 				long t0 = System.currentTimeMillis();
-				List<File> extracted = this.extractZip(zip, dir, filter);
-				System.out.printf("Extract: %s / %dms\n", zip.getName(), (System.currentTimeMillis() - t0));
+				List<File> extracted = this.unzip(zip, dir, filter);
+				System.out.printf("unzip: %s / %dms\n", zip.getName(), (System.currentTimeMillis() - t0));
 				for (File file : extracted) {
 					if (file.exists()) {
 						File parent = file.getParentFile();
@@ -451,7 +557,13 @@ public class KsjDataManager {
 					throw new IllegalStateException();
 				}
 			}
-			ret = dir.listFiles(filter);
+			File[] listFiles = dir.listFiles(filter);
+			File[] zipFiles = new File[listFiles.length];
+			for (int i = 0; i < listFiles.length; i++) {
+				File file = listFiles[i];
+				zipFiles[i] = gzip(file);
+			}
+			ret = zipFiles;
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
@@ -725,9 +837,6 @@ public class KsjDataManager {
 		long t0 = System.currentTimeMillis();
 		
 		RailwayCollection ret = null;
-		//String name = "all" + File.separatorChar + "N02.obj";
-		//RailwayCollection ret = this.readSerializable(name, RailwayCollection.class);
-		//if (ret == null) {
 		this.getKsjFile(TYPE_RAILWAY);
 		try {
 			SAXParser parser = this.factory.newSAXParser();
@@ -739,11 +848,9 @@ public class KsjDataManager {
 			RailroadSectionData[] sections = handler.getRailroadSections();
 
 			ret = new RailwayCollection(stations, sections);
-			//writeSerializable(name, ret);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		//}
 		System.out.printf("N02 %02d: %dms\n", 2, (System.currentTimeMillis() - t0));
 
 		return ret;
@@ -811,6 +918,14 @@ public class KsjDataManager {
 		try {
 			long t0 = System.currentTimeMillis();
 
+			File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_PREF_POLYGON_FORMAT, code));
+
+			List<Polygon> prefPolygons = readPolygonCSV(prefFile);
+			if (prefPolygons.isEmpty()) {
+				return ret;
+			}
+
 			File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 					+ String.format(CSV_AREA_POLYGON_FORMAT, code));
 
@@ -821,14 +936,6 @@ public class KsjDataManager {
 			List<CityAreas> areasList = readAreasCSV(code, polygons);
 			if (areasList.isEmpty())
 				return ret;
-
-			File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-					+ String.format(CSV_PREF_POLYGON_FORMAT, code));
-
-			List<Polygon> prefPolygons = readPolygonCSV(prefFile);
-			if (prefPolygons.isEmpty()) {
-				return ret;
-			}
 
 			ret = new CityAreaCollection(code,
 					prefPolygons.toArray(new Polygon[prefPolygons.size()]),
@@ -947,7 +1054,7 @@ public class KsjDataManager {
 			String prefPath = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 					+ String.format(CSV_PREF_POLYGON_FORMAT, code);
 
-			// 4. Prefecutre Polygon
+			// 4. Prefecture Polygon
 			this.writePolygonCSV(prefPath, Arrays.asList(data.getPolygons()));
 
 		} catch (IOException e) {
@@ -957,10 +1064,38 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	public PrefectureCollection getPrefectureData(int code) {
-		CityAreaCollection area = getAreaCollection(code);
-		BusCollection bus = getBusCollection(code);
-		return new PrefectureCollection(code, area.getPolygons(), area.getCityAreas(), bus);
+	public PrefectureCollection getPrefectureData(final int code) {
+		PrefectureCollection ret = null;
+		File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+				+ String.format(CSV_PREF_POLYGON_FORMAT, code));
+
+		try {
+			List<Polygon> polygons = readPolygonCSV(prefFile);
+			if (!polygons.isEmpty()) {
+				final PrefectureCollection pref = new PrefectureCollection(
+						code, polygons.toArray(new Polygon[polygons.size()]));
+				Thread thread = new Thread() {
+					@Override
+					public void run() {
+						CityAreaCollection area = getAreaCollection(code);
+						pref.setAreas(area.getCityAreas());
+						BusCollection bus = getBusCollection(code);
+						pref.setBusCollection(bus);
+					}
+				};
+				thread.setPriority(Thread.MIN_PRIORITY);
+				thread.start();
+				ret = pref;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (ret == null) {
+			CityAreaCollection area = getAreaCollection(code);
+			BusCollection bus = getBusCollection(code);
+			ret = new PrefectureCollection(code, area.getPolygons(), area.getCityAreas(), bus);
+		}
+		return ret;
 	}
 	
 	/**
@@ -1020,25 +1155,24 @@ public class KsjDataManager {
 		long t0 = System.currentTimeMillis();
 
 		CityArea[] areas = null;
-		//String name = String.format("%02d" + File.separatorChar + "N03-%02d.obj", code, code);
-		//CityArea[] areas = this.readSerializable(name, CityArea[].class);
-		//if (areas == null) {
+
+		File file = new File(this.orgDir + File.separatorChar
+				+ String.format("%02d" + File.separatorChar + "N03-12_%02d_120331.xml.gz",
+						code, code));
+
 		this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
+
 		try {
 			SAXParser parser = this.factory.newSAXParser();
-			File file = new File(this.orgDir + File.separatorChar
-					+ String.format("%02d" + File.separatorChar + "N03-12_%02d_120331.xml",
-							code, code));
 			HandlerN03 handler = new HandlerN03();
-			parser.parse(file, handler);
+
+			parser.parse(new GZIPInputStream(new FileInputStream(file)), handler);
 
 			areas = handler.getAreas();
 
-			//writeSerializable(name, areas);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		//}
 		CityAreaCollection ret = new CityAreaCollection(code, areas);
 		System.out.printf("N03 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -1197,28 +1331,22 @@ public class KsjDataManager {
 		long t0 = System.currentTimeMillis();
 
 		BusStop[] ret = null;
-		//String name = String.format("%02d" + File.separatorChar + "P11-%02d.obj", code, code);
-		//BusStop[] ret = this.readSerializable(name, BusStop[].class);
-		//if (ret == null) {
+		File file = new File(this.orgDir + File.separatorChar
+				+ String.format("%02d" + File.separatorChar + "P11-10_%02d-jgd-g.xml",
+						code, code));
+
 		this.getKsjFile(TYPE_BUS_STOP, code);
 		try {
 			SAXParser parser = this.factory.newSAXParser();
-			File file = new File(this.orgDir
-					+ File.separatorChar
-					+ String.format("%02d" + File.separatorChar + "P11-10_%02d-jgd-g.xml",
-							code, code));
 			HandlerP11 handler = new HandlerP11();
-			parser.parse(file, handler);
+			
+			parser.parse(new GZIPInputStream(new FileInputStream(file)), handler);
 
 			ret = handler.getBusStopArray();
-
-			//writeSerializable(name, ret);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		//}
-
 		System.out.printf("P11 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
 		return ret;
@@ -1232,28 +1360,22 @@ public class KsjDataManager {
 		long t0 = System.currentTimeMillis();
 
 		BusRoute[] ret = null;
-		//String name = String.format("%02d" + File.separatorChar + "N07-%02d.obj", code, code);
-		//BusRoute[] ret = this.readSerializable(name, BusRoute[].class);
-		//if (ret == null) {
 		this.getKsjFile(TYPE_BUS_ROUTE, code);
+		File file = new File(
+				this.orgDir + File.separatorChar +
+				String.format("%02d" + File.separatorChar + "N07-11_%02d.xml.gz",
+								code, code));
 		try {
 			SAXParser parser = this.factory.newSAXParser();
-			File file = new File(
-					this.orgDir
-							+ File.separatorChar
-							+ String.format("%02d" + File.separatorChar + "N07-11_%02d.xml",
-									code, code));
+
 			HandlerN07 handler = new HandlerN07();
-			parser.parse(file, handler);
+			parser.parse(new GZIPInputStream(new FileInputStream(file)), handler);
 
 			ret = handler.getBusRoutes();
-
-			//writeSerializable(name, ret);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		//}
 
 		System.out.printf("N07 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -1539,82 +1661,6 @@ public class KsjDataManager {
 
 			ret = new BusCollection(code, stops, routes);
 			this.writeBusCollectionCsv(ret);
-		}
-		return ret;
-	}
-
-	/**
-	 * オブジェクトを直列化してファイルに保存します。 衝突を避けるため.tmpファイルに保存後、リネームします。
-	 * 
-	 * @param name 保存ファイル名
-	 * @param obj シリアライズ可能なオブジェクト
-	 * @return 保存の成否
-	 */
-	public boolean writeSerializable(String name, Object obj) {
-		boolean ret = false;
-		String path = this.serializeDir + File.separator + name;
-		File file = new File(path + ".tmp");
-		if (!file.getParentFile().isDirectory() && !file.getParentFile().mkdirs()) {
-			return false;
-		}
-		try {
-			ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file));
-			try {
-				out.writeObject(obj);
-				out.flush();
-			} finally {
-				out.close();
-			}
-			if (!file.renameTo(new File(this.serializeDir + File.separator + name))) {
-				if (!file.delete()) {
-					throw new IllegalStateException("Failure of delete: " + file);
-				}
-				return ret;
-			}
-		} catch (Exception e) {
-			ret = false;
-			e.printStackTrace();
-			if (file.isFile() && !file.delete()) {
-				throw new IllegalStateException("Failure of delete: " + file);
-			}
-			File file2 = new File(this.serializeDir + File.separator + name);
-			if (file2.isFile() && !file2.delete()) {
-				throw new IllegalStateException("Failure of delete: " + file);
-			}
-		}
-		return ret;
-	}
-
-	/**
-	 * ファイルから直列化して保存されたオブジェクトを読み込みます。
-	 * 
-	 * @param name ファイル名
-	 * @param c
-	 * @return オブジェクト
-	 */
-	public <T> T readSerializable(String name, Class<T> c) {
-		T ret = null;
-		String path = this.serializeDir + File.separator + name;
-		File file = new File(path);
-		if (file.isFile()) {
-			try {
-				ObjectInputStream in = null;
-				try {
-					in = new ObjectInputStream(new FileInputStream(file));
-					Object obj = in.readObject();
-					ret = c.cast(obj);
-				} finally {
-					if (in != null) {
-						in.close();
-					}
-				}
-			} catch (Exception e) {
-				System.err.println(e.getClass().getName() +": "+ e.getMessage());
-				ret = null;
-				if (file.isFile() && !file.delete()) {
-					throw new IllegalStateException("Failure of delete: " + file);
-				}
-			}
 		}
 		return ret;
 	}

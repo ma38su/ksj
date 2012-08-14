@@ -9,8 +9,7 @@ public class Main {
 		
 		KsjDataManager mgr = new KsjDataManager(
 				".data"+File.separatorChar+"org",
-				".data"+File.separatorChar+"csv",
-				".data"+File.separatorChar+"serialize"
+				".data"+File.separatorChar+"csv"
 		);
 
 		mgr.getAreaCollections();

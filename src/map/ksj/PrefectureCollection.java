@@ -12,6 +12,13 @@ public class PrefectureCollection {
 	
 	private transient Rectangle bounds;
 
+	public PrefectureCollection(int code, Polygon[] polygons) {
+		this.code = code;
+		this.polygons = polygons;
+		
+		this.initBounds();
+	}
+	
 	public PrefectureCollection(int code, Polygon[] polygons, CityAreas[] areas, BusCollection bus) {
 		this.code = code;
 		this.polygons = polygons;
@@ -41,8 +48,16 @@ public class PrefectureCollection {
 		return this.areas;
 	}
 	
+	public void setAreas(CityAreas[] areas) {
+		this.areas = areas;
+	}
+	
 	public BusCollection getBusCollection() {
 		return this.bus;
+	}
+	
+	public void setBusCollection(BusCollection bus) {
+		this.bus = bus;
 	}
 	
 	private void initBounds() {
