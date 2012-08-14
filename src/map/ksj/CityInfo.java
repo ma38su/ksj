@@ -13,7 +13,7 @@ public class CityInfo implements Serializable {
 	/**
 	 * 都道府県名
 	 */
-	private static final String[] prefectureName = new String[]{
+	public static final String[] PREF_NAME = new String[]{
 			"",
 			"北海道",
 			"青森県",
@@ -90,7 +90,7 @@ public class CityInfo implements Serializable {
 	}
 	
 	public String getPrefectureName() {
-		return prefectureName[this.code];
+		return PREF_NAME[this.code];
 	}
 	
 	public int getCode() {
@@ -106,8 +106,8 @@ public class CityInfo implements Serializable {
 	}
 
 	public void setPrn(String prn) {
-		for (int i = 0; i < prefectureName.length; i++) {
-			if (prn.equals(prefectureName[i])) {
+		for (int i = 0; i < PREF_NAME.length; i++) {
+			if (prn.equals(PREF_NAME[i])) {
 				this.code = i;
 				return;
 			}
@@ -165,6 +165,6 @@ public class CityInfo implements Serializable {
 	@Override
 	public String toString() {
 		return String.format("%s(%d) / %s / %s / %s : %05d (%02d)", 
-				prefectureName[this.code], this.sun, this.con, this.cn2, this.aac, this.code);
+				PREF_NAME[this.code], this.sun, this.con, this.cn2, this.aac, this.code);
 	}
 }

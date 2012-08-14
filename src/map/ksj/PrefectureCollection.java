@@ -1,21 +1,32 @@
 package map.ksj;
 
+import java.awt.Polygon;
 import java.awt.Rectangle;
 
 public class PrefectureCollection {
 	
 	private int code;
+	private Polygon[] polygons;
 	private CityAreas[] areas;
 	private BusCollection bus;
 	
-	private Rectangle bounds;
+	private transient Rectangle bounds;
 
-	public PrefectureCollection(int code, CityAreas[] areas, BusCollection bus) {
+	public PrefectureCollection(int code, Polygon[] polygons, CityAreas[] areas, BusCollection bus) {
 		this.code = code;
+		this.polygons = polygons;
 		this.areas = areas;
 		this.bus = bus;
 
 		this.initBounds();
+	}
+	
+	public Polygon[] getPolygons() {
+		return this.polygons;
+	}
+	
+	public String getName() {
+		return CityInfo.PREF_NAME[this.code];
 	}
 	
 	public int getCode() {

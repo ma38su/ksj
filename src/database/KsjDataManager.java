@@ -1,6 +1,7 @@
 package database;
 
 import java.awt.Point;
+import java.awt.Polygon;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -20,6 +21,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.channels.IllegalSelectorException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -133,6 +135,12 @@ public class KsjDataManager {
 	 */
 	private static final String CSV_AREA_POLYGON_FORMAT = 
 			"area" + File.separatorChar + "area_polygon_%02d.csv";
+
+	/**
+	 * 行政区画(面)のポリゴンデータのファイル名
+	 */
+	private static final String CSV_PREF_POLYGON_FORMAT = 
+			"area" + File.separatorChar + "pref_polygon_%02d.csv";
 
 
 	private static final String[] KSJ_URL_FORMAT_LIST = { null, // 0
@@ -783,10 +791,8 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private List<GmlPolygon> readPolygonCSV(int code) throws IOException {
+	private List<GmlPolygon> readPolygonCSV(File file) throws IOException {
 		List<GmlPolygon> ret = new ArrayList<GmlPolygon>();
-		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_AREA_POLYGON_FORMAT, code));
 		if (file.isFile()) {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
 			try {
@@ -797,8 +803,8 @@ public class KsjDataManager {
 					int[] x = new int[n];
 					int[] y = new int[n];
 					for (int i = 0; i < n; i++) {
-						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
-						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
+						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
+						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
 					}
 					ret.add(new GmlPolygon(n, x, y));
 				}
@@ -847,7 +853,9 @@ public class KsjDataManager {
 		try {
 			long t0 = System.currentTimeMillis();
 
-			List<GmlPolygon> polygons = readPolygonCSV(code);
+			File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_AREA_POLYGON_FORMAT, code));
+			List<GmlPolygon> polygons = readPolygonCSV(file);
 			if (polygons.isEmpty())
 				return ret;
 			
@@ -855,7 +863,16 @@ public class KsjDataManager {
 			if (areasList.isEmpty())
 				return ret;
 
-			ret = new CityAreaCollection(code, areasList.toArray(new CityAreas[areasList.size()]));
+			File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_PREF_POLYGON_FORMAT, code));
+
+			List<GmlPolygon> prefPolygons = readPolygonCSV(prefFile);
+			if (prefPolygons.isEmpty())
+				return ret;
+
+			ret = new CityAreaCollection(code,
+					prefPolygons.toArray(new GmlPolygon[prefPolygons.size()]),
+					areasList.toArray(new CityAreas[areasList.size()]));
 
 			System.out.printf("AREA(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -867,7 +884,7 @@ public class KsjDataManager {
 	}
 	
 	private void writeAreaCSV(CityAreaCollection data,
-			List<GmlPolygon> polygonList) throws IOException {
+			List<Polygon> polygonList) throws IOException {
 
 		int code = data.getCode();
 		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
@@ -891,7 +908,7 @@ public class KsjDataManager {
 					out.write(String.format("%02d,%05d,%s,%s,%s", info.getCode(),
 							info.getAac(), info.getSun(), info.getCon(), info.getCn2()));
 
-					for (GmlPolygon polygon : area.getPolygons()) {
+					for (Polygon polygon : area.getPolygons()) {
 						out.write(String.format(",%d", polygonList.size()));
 						polygonList.add(polygon);
 					}
@@ -913,9 +930,7 @@ public class KsjDataManager {
 		}
 	}
 
-	private void writePolygonCSV(int code, List<GmlPolygon> polygonList) throws IOException {
-		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_AREA_POLYGON_FORMAT, code);
+	private void writePolygonCSV(String path, List<Polygon> polygonList) throws IOException {
 		
 		File file = new File(path);
 		if (file.exists() && !file.delete()) {
@@ -929,15 +944,11 @@ public class KsjDataManager {
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
 					tmpFile), CHARSET));
 			try {
-				for (GmlPolygon polygon : polygonList) {
-					int n = polygon.getArrayLength();
-					int[] x = polygon.getArrayX();
-					int[] y = polygon.getArrayY();
-					
-					out.write(String.format("%d", n));
-					for (int i = 0; i < n; i++) {
-						out.write(String.format(",%f,%f", FixedPoint.parseDouble(y[i]),
-								FixedPoint.parseDouble(x[i])));
+				for (Polygon polygon : polygonList) {
+					out.write(String.format("%d", polygon.npoints));
+					for (int i = 0; i < polygon.npoints; i++) {
+						out.write(String.format(",%f,%f", FixedPoint.parseDouble(polygon.ypoints[i]),
+								FixedPoint.parseDouble(polygon.xpoints[i])));
 					}
 					out.newLine();
 					out.flush();
@@ -961,14 +972,23 @@ public class KsjDataManager {
 		boolean ret = false;
 		int code = data.getCode();
 
-		List<GmlPolygon> polygonList = new ArrayList<GmlPolygon>();
+		List<Polygon> polygonList = new ArrayList<Polygon>();
 		
 		try {
 			// 1. Area
 			this.writeAreaCSV(data, polygonList);
 			
+			String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_AREA_POLYGON_FORMAT, code);
+
 			// 3. Area Polygon
-			this.writePolygonCSV(code, polygonList);
+			this.writePolygonCSV(path, polygonList);
+
+			String prefPath = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
+					+ String.format(CSV_PREF_POLYGON_FORMAT, code);
+
+			// 4. Prefecutre Polygon
+			this.writePolygonCSV(prefPath, Arrays.asList(data.getPolygons()));
 
 		} catch (IOException e) {
 			ret = false;
@@ -980,7 +1000,7 @@ public class KsjDataManager {
 	public PrefectureCollection getPrefectureData(int code) {
 		CityAreaCollection area = getAreaCollection(code);
 		BusCollection bus = getBusCollection(code);
-		return new PrefectureCollection(code, area.getCityAreas(), bus);
+		return new PrefectureCollection(code, area.getPolygons(), area.getCityAreas(), bus);
 	}
 	
 	/**

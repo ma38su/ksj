@@ -1,13 +1,9 @@
 package map.ksj;
 
-import java.awt.Graphics2D;
 import java.awt.Polygon;
-import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.PathIterator;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,12 +13,14 @@ import java.util.List;
  * 曲線型
  * @author fujiwara
  */
-public class GmlPolygon implements Data, Serializable {
+public class GmlPolygon extends Polygon implements Data, Serializable {
 	
-	public static List<Polygon> get(GmlPolygon[] polygons) {
+	public static List<Polygon> getOpt(List<Polygon> polygons) {
 		Area area = new Area();
-		for (GmlPolygon polygon : polygons) {
-			area.add(new Area(new Polygon(polygon.x, polygon.y, polygon.n)));
+		for (int i = 0; i < polygons.size(); i++) {
+			System.out.printf("area add: %d / %d\n", i, polygons.size());
+			Polygon polygon = polygons.get(i);
+			area.add(new Area(new Polygon(polygon.xpoints, polygon.ypoints, polygon.npoints)));
 		}
 		return toPolygonList(area);
 	}
@@ -64,7 +62,7 @@ public class GmlPolygon implements Data, Serializable {
 						aryX[i] = x.get(i);
 						aryY[i] = y.get(i);
 					}
-					list.add(new Polygon(aryX, aryY, aryX.length));
+					list.add(new GmlPolygon(aryX.length, aryX, aryY));
 					x.clear();
 					y.clear();
 					break;
@@ -76,78 +74,30 @@ public class GmlPolygon implements Data, Serializable {
 		return list;
 	}
 	
-	private int n;
-	private int[] x;
-	private int[] y;
-	
-	private transient Rectangle bounds;
-	
 	public GmlPolygon() {
+		super();
 	}
 
 	public GmlPolygon(int n, int[] x, int[] y) {
-
-		this.n = n;
-		this.x = x;
-		this.y = y;
-		initBounds();
+		super(x, y, n);
 	}
 	
-	private void initBounds() {
-		assert(this.x[0] == this.x[this.n - 1] && this.y[0] == this.y[this.n - 1]);
-
-		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-		int maxX = 0, maxY = 0;
-		for (int i = 0; i < this.n; i++) {
-			if (minX > this.x[i]) minX = this.x[i];
-			if (maxX < this.x[i]) maxX = this.x[i];
-			if (minY > this.y[i]) minY = this.y[i];
-			if (maxY < this.y[i]) maxY = this.y[i];
-		}
-		this.bounds = new Rectangle(minX, minY, maxX - minX, maxY - minY);
-	}
-
-	public Rectangle getBounds() {
-		return this.bounds;
-	}
-
-	public int getArrayLength() {
-		return this.n;
-	}
-	
-	public int[] getArrayX() {
-		return this.x;
-	}
-	
-	public int[] getArrayY() {
-		return this.y;
-	}
-	
-	public void draw(Graphics2D g) {
-		g.drawPolyline(x, y, n);
-	}
-
-	public void fill(Graphics2D g) {
-		g.fillPolygon(x, y, n);
-	}
-
 	public void link(String tag, Object obj) {
 		if (obj instanceof GmlCurve) {
 			GmlCurve curve = (GmlCurve) obj;
-			this.x = curve.getArrayX();
-			this.y = curve.getArrayY();
-			this.n = curve.getArrayLength();
-			initBounds();
+			this.xpoints = curve.getArrayX();
+			this.ypoints = curve.getArrayY();
+			this.npoints = curve.getArrayLength();
 		}
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
-		boolean ret = false;
-		if (obj instanceof GmlPolygon) {
-			GmlPolygon curve = (GmlPolygon) obj;
-			ret = (Arrays.equals(this.x, curve.x) && Arrays.equals(this.y, curve.y)) ||
-					(Arrays.equals(this.x, reverseArray(curve.x)) && Arrays.equals(this.y, reverseArray(curve.y)));
+		boolean ret = this == obj;
+		if (!ret && obj instanceof Polygon) {
+			Polygon polygon = (Polygon) obj;
+			ret = (Arrays.equals(this.xpoints, polygon.xpoints) && Arrays.equals(this.ypoints, polygon.ypoints)) ||
+					(Arrays.equals(this.xpoints, reverseArray(polygon.xpoints)) && Arrays.equals(this.ypoints, reverseArray(polygon.ypoints)));
 		}
 		return ret;
 	}
@@ -163,25 +113,91 @@ public class GmlPolygon implements Data, Serializable {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder("pts: ");
-		for (int i = 0; i < this.n; i++) {
+		for (int i = 0; i < this.npoints; i++) {
 			sb.append('[');
-			sb.append(this.x[i]);
+			sb.append(this.xpoints[i]);
 			sb.append(", ");
-			sb.append(this.y[i]);
+			sb.append(this.ypoints[i]);
 			sb.append("], ");
 		}
 		return "points: "+ sb.toString();
 	}
 	
+	public Polygon join(Polygon polygon) {
+		int i = 0;
+		int j = 0;
+		while (i < this.npoints) {
+			while (j < polygon.npoints) {
+				if (this.xpoints[i] == polygon.xpoints[j] && this.ypoints[i] == polygon.ypoints[j]) {
+					int k = 1;
+					while (i + k < this.npoints && j + k < this.npoints && this.xpoints[i + k] == polygon.xpoints[j + k] && this.ypoints[i + k] == polygon.ypoints[j + k]) k++;
+					if (k > 1) {
+						int n = this.npoints + polygon.npoints - k;
+						int[] x = new int[n];
+						int[] y = new int[n];
+						for (int l = 0; l < i; l++) {
+							x[l] = this.xpoints[l];
+							y[l] = this.ypoints[l];
+						}
+						for (int l = 0; l < polygon.npoints; l++) {
+							x[l + i] = polygon.xpoints[(j + l) % polygon.npoints];
+							y[l + i] = polygon.ypoints[(j + l) % polygon.npoints];
+						}
+						for (int l = i + k; l < this.npoints; l++) {
+							x[l + polygon.npoints - k] = this.xpoints[l];
+							y[l + polygon.npoints - k] = this.ypoints[l];
+						}
+						return new Polygon(x, y, n);
+					}
+					while (i + k < this.npoints && j - k >= 0 && this.xpoints[i + k] == polygon.xpoints[j - k] && this.ypoints[i + k] == polygon.ypoints[j - k]) k++;
+					if (k > 1) {
+						int n = this.npoints + polygon.npoints - k;
+						int[] x = new int[n];
+						int[] y = new int[n];
+						for (int l = 0; l < i; l++) {
+							x[l] = this.xpoints[l];
+							y[l] = this.ypoints[l];
+						}
+						for (int l = 0; l < polygon.npoints; l++) {
+							x[l + i] = polygon.xpoints[(j - l) % polygon.npoints];
+							y[l + i] = polygon.ypoints[(j - l) % polygon.npoints];
+						}
+						for (int l = i + k; l < this.npoints; l++) {
+							x[l + polygon.npoints - k] = this.xpoints[l];
+							y[l + polygon.npoints - k] = this.ypoints[l];
+						}
+						return new Polygon(x, y, n);
+					}
+					while (i - k < this.npoints && j + k >= 0 && this.xpoints[i - k] == polygon.xpoints[j + k] && this.ypoints[i - k] == polygon.ypoints[j + k]) k++;
+					if (k > 1) {
+						int n = this.npoints + polygon.npoints - k;
+						int[] x = new int[n];
+						int[] y = new int[n];
+						for (int l = 0; l <= i - k; l++) {
+							x[l] = this.xpoints[l];
+							y[l] = this.ypoints[l];
+						}
+						for (int l = 0; l < polygon.npoints; l++) {
+							x[l + i - k + 1] = this.xpoints[(j + l) % polygon.npoints];
+							y[l + i - k + 1] = this.ypoints[(j + l) % polygon.npoints];
+						}
+						for (int l = i + 1; l < this.npoints; l++) {
+							x[l + polygon.npoints - k] = this.xpoints[l];
+							y[l + polygon.npoints - k] = this.ypoints[l];
+						}
+						return new Polygon(x, y, n);
+					}
+				}
+				j++;
+			}
+			i++;
+		}
+		return null;
+	}
+
 	@Override
 	public int hashCode() {
-		return this.x[0] + this.y[0] + this.x[this.n - 1] + this.y[this.n - 1];
-	}
-	
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-		System.out.println("initBounds");
-		initBounds();
+		return this.xpoints[0] + this.ypoints[0] + this.xpoints[this.npoints - 1] + this.ypoints[this.npoints - 1];
 	}
 	
 }

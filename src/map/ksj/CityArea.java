@@ -36,11 +36,11 @@ public class CityArea implements Data, Serializable {
 	}
 
 	public void draw(Graphics2D g) {
-		this.polygon.draw(g);
+		g.drawPolygon(this.polygon);
 	}
 	
 	public void fill(Graphics2D g) {
-		this.polygon.fill(g);
+		g.fillPolygon(this.polygon);
 	}
 	
 	@Override

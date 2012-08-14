@@ -1,6 +1,7 @@
 package map.ksj;
 
 import java.awt.Graphics2D;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -15,14 +16,14 @@ import java.util.Arrays;
  */
 public class CityAreas implements Serializable {
 
-	private GmlPolygon[] polygons;
+	private Polygon[] polygons;
 	private CityInfo info;
 	
 	private transient int x;
 	private transient int y;
 	private transient Rectangle bounds;
 
-	public CityAreas(CityInfo info, GmlPolygon[] polygons) {
+	public CityAreas(CityInfo info, Polygon[] polygons) {
 		this.info = info;
 		this.polygons = polygons;
 		initBounds();
@@ -38,9 +39,9 @@ public class CityAreas implements Serializable {
 
 	private void initBounds() {
 		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-		int maxX = 0, maxY = 0;
+		long maxX = 0, maxY = 0;
 		int maxS = 0;
-		for (GmlPolygon polygon : polygons) {
+		for (Polygon polygon : this.polygons) {
 			Rectangle r = polygon.getBounds();
 			if (minX > r.x) minX = r.x;
 			if (minY > r.y) minY = r.y;
@@ -52,7 +53,7 @@ public class CityAreas implements Serializable {
 				this.y = r.y + r.height / 2;
 			}
 		}
-		this.bounds = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+		this.bounds = new Rectangle(minX, minY, (int) (maxX - minX), (int) (maxY - minY));
 	}
 	
 	public Rectangle getBounds() {
@@ -67,19 +68,19 @@ public class CityAreas implements Serializable {
 		this.info = info;
 	}
 	
-	public GmlPolygon[] getPolygons() {
+	public Polygon[] getPolygons() {
 		return this.polygons;
 	}
 
 	public void draw(Graphics2D g) {
-		for (GmlPolygon p : this.polygons) {
-			p.draw(g);
+		for (Polygon p : this.polygons) {
+			g.drawPolygon(p);
 		}
 	}
 	
 	public void fill(Graphics2D g) {
-		for (GmlPolygon p : this.polygons) {
-			p.fill(g);
+		for (Polygon p : this.polygons) {
+			g.fillPolygon(p);
 		}
 	}
 	
