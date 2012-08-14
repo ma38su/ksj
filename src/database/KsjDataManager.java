@@ -25,6 +25,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -42,7 +46,6 @@ import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.GmlCurve;
-import map.ksj.GmlPolygon;
 import map.ksj.PrefectureCollection;
 import map.ksj.RailroadInfo;
 import map.ksj.RailroadSectionData;
@@ -313,8 +316,7 @@ public class KsjDataManager {
 	}
 
 	private File getFile(int type, int code) {
-		return new File(this.orgDir
-				+ File.separatorChar
+		return new File(this.orgDir + File.separatorChar
 				+ String.format("%02d" + File.separatorChar + KSJ_TYPE_FORMAT[type] + "-%02d.zip",
 						code, code));
 	}
@@ -354,58 +356,16 @@ public class KsjDataManager {
 				 */
 				URL url = new URL(KSJ_URL_BASE + KSJ_URL_FORMAT_LIST[type]);
 				long t0 = System.currentTimeMillis();
-				System.out.print("Download: " + url);
+				System.out.printf("DL: %s ...\n", url.getPath());
 				if (!this.download(url, zip))
 					return null;
-				System.out.printf(" %dms\n", (System.currentTimeMillis() - t0));
+				System.out.printf("DL: %s / %dms\n", url.getPath(), (System.currentTimeMillis() - t0));
 			}
 			if (zip.exists()) {
 				// ファイルの展開
 				long t0 = System.currentTimeMillis();
-				System.out.print("Extract: " + zip);
 				List<File> extracted = this.extractZip(zip, dir, filter);
-				System.out.printf(" %dms\n", (System.currentTimeMillis() - t0));
-				for (File file : extracted) {
-					if (file.exists()) {
-						File parent = file.getParentFile();
-						if (!dir.equals(parent)) {
-							for (File child : parent.listFiles()) {
-								if (!child.renameTo(new File(dir, child.getName()))) {
-									throw new IllegalSelectorException();
-								}
-							}
-							if (!parent.delete())
-								throw new IllegalStateException();
-						}
-					}
-				}
-				if (!zip.delete()) {
-					throw new IllegalStateException();
-				}
-			}
-			ret = dir.listFiles(filter);
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
-		try {
-			if (zip.exists() || !hasExtracted(dir, filter)) {
-				/*
-				 * 圧縮ファイルが残っている or ディレクトリが存在しない or ディレクトリ内のファイルが存在しない or
-				 * ディレクトリの内容が正確でない（チェックできてない）
-				 */
-				URL url = new URL(KSJ_URL_BASE + KSJ_URL_FORMAT_LIST[type]);
-				long t0 = System.currentTimeMillis();
-				System.out.print("Download: " + url);
-				if (!this.download(url, zip))
-					return null;
-				System.out.printf(" %dms\n", (System.currentTimeMillis() - t0));
-			}
-			if (zip.exists()) {
-				// ファイルの展開
-				long t0 = System.currentTimeMillis();
-				System.out.print("Extract: " + zip);
-				List<File> extracted = this.extractZip(zip, dir, filter);
-				System.out.printf(" %dms\n", (System.currentTimeMillis() - t0));
+				System.out.printf("Extract: %s / %dms\n", zip.getName(), (System.currentTimeMillis() - t0));
 				for (File file : extracted) {
 					if (file.exists()) {
 						File parent = file.getParentFile();
@@ -463,17 +423,16 @@ public class KsjDataManager {
 				 */
 				URL url = new URL(KSJ_URL_BASE + String.format(KSJ_URL_FORMAT_LIST[type], code));
 				long t0 = System.currentTimeMillis();
-				System.out.print("Download: " + url);
+				System.out.printf("DL: %s ...\n", url.getPath());
 				if (!this.download(url, zip))
 					return null;
-				System.out.printf(" %dms\n", (System.currentTimeMillis() - t0));
+				System.out.printf("DL: %s / %dms\n", url.getPath(), (System.currentTimeMillis() - t0));
 			}
 			if (zip.exists()) {
 				// ファイルの展開
 				long t0 = System.currentTimeMillis();
-				System.out.print("Extract: " + zip);
 				List<File> extracted = this.extractZip(zip, dir, filter);
-				System.out.printf(" %dms\n", (System.currentTimeMillis() - t0));
+				System.out.printf("Extract: %s / %dms\n", zip.getName(), (System.currentTimeMillis() - t0));
 				for (File file : extracted) {
 					if (file.exists()) {
 						File parent = file.getParentFile();
@@ -764,35 +723,34 @@ public class KsjDataManager {
 	 */
 	private RailwayCollection readRailwayCollectionGML() {
 		long t0 = System.currentTimeMillis();
+		
+		RailwayCollection ret = null;
+		//String name = "all" + File.separatorChar + "N02.obj";
+		//RailwayCollection ret = this.readSerializable(name, RailwayCollection.class);
+		//if (ret == null) {
+		this.getKsjFile(TYPE_RAILWAY);
+		try {
+			SAXParser parser = this.factory.newSAXParser();
+			File file = new File(this.orgDir + File.separatorChar + "N02-11.xml");
+			HandlerN02 handler = new HandlerN02();
+			parser.parse(file, handler);
 
-		String name = "all" + File.separatorChar + "N02.obj";
-		RailwayCollection ret = this.readSerializable(name, RailwayCollection.class);
-		if (ret == null) {
-			this.getKsjFile(TYPE_RAILWAY);
-			try {
-				SAXParser parser = factory.newSAXParser();
-				File file = new File(this.orgDir + File.separatorChar + "N02-11.xml");
-				HandlerN02 handler = new HandlerN02();
-				parser.parse(file, handler);
+			Station[] stations = handler.getStations();
+			RailroadSectionData[] sections = handler.getRailroadSections();
 
-				Station[] stations = handler.getStations();
-				RailroadSectionData[] sections = handler.getRailroadSections();
-
-				ret = new RailwayCollection(stations, sections);
-
-				writeSerializable(name, ret);
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			ret = new RailwayCollection(stations, sections);
+			//writeSerializable(name, ret);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		//}
 		System.out.printf("N02 %02d: %dms\n", 2, (System.currentTimeMillis() - t0));
 
 		return ret;
 	}
 
-	private List<GmlPolygon> readPolygonCSV(File file) throws IOException {
-		List<GmlPolygon> ret = new ArrayList<GmlPolygon>();
+	private List<Polygon> readPolygonCSV(File file) throws IOException {
+		List<Polygon> ret = new ArrayList<Polygon>();
 		if (file.isFile()) {
 			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
 			try {
@@ -806,7 +764,7 @@ public class KsjDataManager {
 						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
 						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
 					}
-					ret.add(new GmlPolygon(n, x, y));
+					ret.add(new Polygon(x, y, n));
 				}
 			} finally {
 				in.close();
@@ -815,7 +773,7 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private List<CityAreas> readAreasCSV(int code, List<GmlPolygon> polygons) throws IOException {
+	private List<CityAreas> readAreasCSV(int code, List<Polygon> polygons) throws IOException {
 
 		List<CityAreas> ret = new ArrayList<CityAreas>();
 		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
@@ -833,7 +791,7 @@ public class KsjDataManager {
 					String cn2 = param.length > 4 ? param[4] : "";
 					CityInfo info = new CityInfo(prefCode, aac, sun, con, cn2);
 
-					GmlPolygon[] ps = new GmlPolygon[param.length - 5];
+					Polygon[] ps = new Polygon[param.length - 5];
 					for (int i = 5; i < param.length; i++) {
 						int idx = Integer.parseInt(param[i]);
 						ps[i - 5] = polygons.get(idx);
@@ -855,7 +813,8 @@ public class KsjDataManager {
 
 			File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 					+ String.format(CSV_AREA_POLYGON_FORMAT, code));
-			List<GmlPolygon> polygons = readPolygonCSV(file);
+
+			List<Polygon> polygons = readPolygonCSV(file);
 			if (polygons.isEmpty())
 				return ret;
 			
@@ -866,15 +825,16 @@ public class KsjDataManager {
 			File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 					+ String.format(CSV_PREF_POLYGON_FORMAT, code));
 
-			List<GmlPolygon> prefPolygons = readPolygonCSV(prefFile);
-			if (prefPolygons.isEmpty())
+			List<Polygon> prefPolygons = readPolygonCSV(prefFile);
+			if (prefPolygons.isEmpty()) {
 				return ret;
+			}
 
 			ret = new CityAreaCollection(code,
-					prefPolygons.toArray(new GmlPolygon[prefPolygons.size()]),
+					prefPolygons.toArray(new Polygon[prefPolygons.size()]),
 					areasList.toArray(new CityAreas[areasList.size()]));
 
-			System.out.printf("AREA(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
+			System.out.printf("%s(%02d): %dms\n", ret.getName(), code, (System.currentTimeMillis() - t0));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1014,7 +974,7 @@ public class KsjDataManager {
 			
 			ret = this.readAreaCollectionGML(code);
 			this.writeAreaCollectionCSV(ret);
-			System.out.printf("AREA(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
+			System.out.printf("%s(%02d): %dms\n", ret.getName(), code, (System.currentTimeMillis() - t0));
 		}
 		return ret;
 	}
@@ -1023,9 +983,31 @@ public class KsjDataManager {
 	 * @return 行政区画(面)のデータ配列
 	 */
 	public CityAreaCollection[] getAreaCollections() {
-		CityAreaCollection[] ret = new CityAreaCollection[47];
-		for (int i = 1; i <= 47; i++) {
-			ret[i - 1] = this.getAreaCollection(i);
+		BlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(4);
+		ThreadPoolExecutor exec = new ThreadPoolExecutor(4, 4, 0, TimeUnit.MICROSECONDS, queue);
+		final CityAreaCollection[] ret = new CityAreaCollection[47];
+		try {
+			try {
+				int i = 1;
+				while (i <= 47) {
+					if (queue.remainingCapacity() > 0) {
+						final int code = i++;
+						exec.execute(new Runnable() {
+							@Override
+							public void run() {
+								ret[code - 1] = getAreaCollection(code);
+							}
+						});
+					} else {
+						Thread.sleep(1000);
+					}
+				}
+			} finally {
+				exec.shutdown();
+				while (!exec.isTerminated()) Thread.sleep(1000);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 		return ret;
 	}
@@ -1037,26 +1019,26 @@ public class KsjDataManager {
 	public CityAreaCollection readAreaCollectionGML(int code) {
 		long t0 = System.currentTimeMillis();
 
-		String name = String.format("%02d" + File.separatorChar + "N03-%02d.obj", code, code);
-		CityArea[] areas = this.readSerializable(name, CityArea[].class);
-		if (areas == null) {
-			this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
-			try {
-				SAXParser parser = this.factory.newSAXParser();
-				File file = new File(this.orgDir + File.separatorChar
-						+ String.format("%02d" + File.separatorChar + "N03-12_%02d_120331.xml",
-								code, code));
-				HandlerN03 handler = new HandlerN03();
-				parser.parse(file, handler);
+		CityArea[] areas = null;
+		//String name = String.format("%02d" + File.separatorChar + "N03-%02d.obj", code, code);
+		//CityArea[] areas = this.readSerializable(name, CityArea[].class);
+		//if (areas == null) {
+		this.getKsjFile(TYPE_ADMINISTRATIVEAREA, code);
+		try {
+			SAXParser parser = this.factory.newSAXParser();
+			File file = new File(this.orgDir + File.separatorChar
+					+ String.format("%02d" + File.separatorChar + "N03-12_%02d_120331.xml",
+							code, code));
+			HandlerN03 handler = new HandlerN03();
+			parser.parse(file, handler);
 
-				areas = handler.getAreas();
+			areas = handler.getAreas();
 
-				writeSerializable(name, areas);
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			//writeSerializable(name, areas);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		//}
 		CityAreaCollection ret = new CityAreaCollection(code, areas);
 		System.out.printf("N03 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -1214,27 +1196,28 @@ public class KsjDataManager {
 	private BusStop[] readBusStopsGML(int code) {
 		long t0 = System.currentTimeMillis();
 
-		String name = String.format("%02d" + File.separatorChar + "P11-%02d.obj", code, code);
-		BusStop[] ret = this.readSerializable(name, BusStop[].class);
-		if (ret == null) {
-			this.getKsjFile(TYPE_BUS_STOP, code);
-			try {
-				SAXParser parser = this.factory.newSAXParser();
-				File file = new File(this.orgDir
-						+ File.separatorChar
-						+ String.format("%02d" + File.separatorChar + "P11-10_%02d-jgd-g.xml",
-								code, code));
-				HandlerP11 handler = new HandlerP11();
-				parser.parse(file, handler);
+		BusStop[] ret = null;
+		//String name = String.format("%02d" + File.separatorChar + "P11-%02d.obj", code, code);
+		//BusStop[] ret = this.readSerializable(name, BusStop[].class);
+		//if (ret == null) {
+		this.getKsjFile(TYPE_BUS_STOP, code);
+		try {
+			SAXParser parser = this.factory.newSAXParser();
+			File file = new File(this.orgDir
+					+ File.separatorChar
+					+ String.format("%02d" + File.separatorChar + "P11-10_%02d-jgd-g.xml",
+							code, code));
+			HandlerP11 handler = new HandlerP11();
+			parser.parse(file, handler);
 
-				ret = handler.getBusStopArray();
+			ret = handler.getBusStopArray();
 
-				writeSerializable(name, ret);
+			//writeSerializable(name, ret);
 
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		//}
 
 		System.out.printf("P11 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -1248,28 +1231,29 @@ public class KsjDataManager {
 	private BusRoute[] readBusRoutesGML(int code) {
 		long t0 = System.currentTimeMillis();
 
-		String name = String.format("%02d" + File.separatorChar + "N07-%02d.obj", code, code);
-		BusRoute[] ret = this.readSerializable(name, BusRoute[].class);
-		if (ret == null) {
-			this.getKsjFile(TYPE_BUS_ROUTE, code);
-			try {
-				SAXParser parser = this.factory.newSAXParser();
-				File file = new File(
-						this.orgDir
-								+ File.separatorChar
-								+ String.format("%02d" + File.separatorChar + "N07-11_%02d.xml",
-										code, code));
-				HandlerN07 handler = new HandlerN07();
-				parser.parse(file, handler);
+		BusRoute[] ret = null;
+		//String name = String.format("%02d" + File.separatorChar + "N07-%02d.obj", code, code);
+		//BusRoute[] ret = this.readSerializable(name, BusRoute[].class);
+		//if (ret == null) {
+		this.getKsjFile(TYPE_BUS_ROUTE, code);
+		try {
+			SAXParser parser = this.factory.newSAXParser();
+			File file = new File(
+					this.orgDir
+							+ File.separatorChar
+							+ String.format("%02d" + File.separatorChar + "N07-11_%02d.xml",
+									code, code));
+			HandlerN07 handler = new HandlerN07();
+			parser.parse(file, handler);
 
-				ret = handler.getBusRoutes();
+			ret = handler.getBusRoutes();
 
-				writeSerializable(name, ret);
+			//writeSerializable(name, ret);
 
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		//}
 
 		System.out.printf("N07 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -1510,9 +1494,31 @@ public class KsjDataManager {
 	 * @return バスのデータ(バスルートおよびバス停留所)
 	 */
 	public BusCollection[] getBusCollections() {
-		BusCollection[] ret = new BusCollection[47];
-		for (int i = 1; i <= 47; i++) {
-			ret[i - 1] = getBusCollection(i);
+		BlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(4);
+		ThreadPoolExecutor exec = new ThreadPoolExecutor(4, 4, 0, TimeUnit.MICROSECONDS, queue);
+		final BusCollection[] ret = new BusCollection[47];
+		try {
+			try {
+				int i = 1;
+				while (i <= 47) {
+					if (queue.remainingCapacity() > 0) {
+						final int code = i++;
+						exec.execute(new Runnable() {
+							@Override
+							public void run() {
+								ret[code - 1] = getBusCollection(code);
+							}
+						});
+					} else {
+						Thread.sleep(1000);
+					}
+				}
+			} finally {
+				exec.shutdown();
+				while (!exec.isTerminated()) Thread.sleep(1000);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 		return ret;
 	}
@@ -1544,7 +1550,7 @@ public class KsjDataManager {
 	 * @param obj シリアライズ可能なオブジェクト
 	 * @return 保存の成否
 	 */
-	private boolean writeSerializable(String name, Object obj) {
+	public boolean writeSerializable(String name, Object obj) {
 		boolean ret = false;
 		String path = this.serializeDir + File.separator + name;
 		File file = new File(path + ".tmp");
@@ -1586,7 +1592,7 @@ public class KsjDataManager {
 	 * @param c
 	 * @return オブジェクト
 	 */
-	private <T> T readSerializable(String name, Class<T> c) {
+	public <T> T readSerializable(String name, Class<T> c) {
 		T ret = null;
 		String path = this.serializeDir + File.separator + name;
 		File file = new File(path);

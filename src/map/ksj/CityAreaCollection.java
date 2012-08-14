@@ -60,6 +60,10 @@ public class CityAreaCollection implements Serializable {
 		System.out.printf("%d polygon: %dms\n", this.code, (System.currentTimeMillis() - t0));
 	}
 	
+	public String getName() {
+		return CityInfo.PREF_NAME[this.code];
+	}
+	
 	public Polygon[] getPolygons() {
 		return this.polygons;
 	}
