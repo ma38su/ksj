@@ -7,6 +7,9 @@ public class RailroadInfo {
 	private int railwayType;
 	private int instituteType;
 	
+	public static final int RAIL_JR = 11;
+	public static final int RAIL_NORMAL = 12;
+	
 	public RailroadInfo() {
 	}
 
@@ -17,6 +20,10 @@ public class RailroadInfo {
 		this.company = company;
 	}
 
+	public boolean isJrLine() {
+		assert(this.railwayType == 11 && this.instituteType != 1 && this.instituteType == 2);
+		return (this.instituteType == 1 || this.instituteType == 2) && (this.railwayType == 11);
+	}
 
 	public String getLine() {
 		return this.line;

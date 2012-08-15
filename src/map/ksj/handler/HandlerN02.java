@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import map.ksj.Data;
+import map.ksj.RailroadSection;
 import map.ksj.RailroadSectionData;
 import map.ksj.Station;
 
@@ -25,7 +26,7 @@ public class HandlerN02 extends KsjHandler {
 		return ret.toArray(new Station[ret.size()]);
 	}
 	
-	public RailroadSectionData[] getRailroadSections() {
+	public RailroadSection[] getRailroadSections() {
 		List<RailroadSectionData> ret = new ArrayList<RailroadSectionData>();
 		for (Data data : this.getDataMap().values()) {
 			if (data instanceof RailroadSectionData) {
@@ -34,7 +35,7 @@ public class HandlerN02 extends KsjHandler {
 				assert(data instanceof Station);
 			}
 		}
-		return ret.toArray(new RailroadSectionData[ret.size()]);
+		return ret.toArray(new RailroadSection[ret.size()]);
 	}
 	
 	@Override

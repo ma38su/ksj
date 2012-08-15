@@ -51,7 +51,8 @@ import map.ksj.BusStop;
 import map.ksj.GmlCurve;
 import map.ksj.PrefectureCollection;
 import map.ksj.RailroadInfo;
-import map.ksj.RailroadSectionData;
+import map.ksj.RailroadLine;
+import map.ksj.RailroadSection;
 import map.ksj.RailwayCollection;
 import map.ksj.Station;
 import map.ksj.handler.HandlerN02;
@@ -601,12 +602,12 @@ public class KsjDataManager {
 		return infos;	
 	}
 
-	private RailwayCollection readRailwayCSV(List<RailroadInfo> infos, List<GmlCurve> curves)
+	private RailwayCollection readRailwayCollectionCSV(List<RailroadInfo> infos, List<GmlCurve> curves)
 			throws IOException {
 
 		RailwayCollection ret = null;
 		List<Station> stations = new ArrayList<Station>();
-		List<RailroadSectionData> sections = new ArrayList<RailroadSectionData>();
+		List<RailroadLine> lines = new ArrayList<RailroadLine>();
 		
 		File file = new File(this.csvDir + File.separatorChar + CSV_RAIL);
 		if (file.isFile()) {
@@ -620,20 +621,25 @@ public class KsjDataManager {
 					int infoIdx = Integer.parseInt(param[1]);
 					RailroadInfo info = infos.get(infoIdx);
 					
-					int curveIdx = Integer.parseInt(param[2]);
-					GmlCurve curve = curves.get(curveIdx);
-					
 					if ("".equals(name)) {
-						sections.add(new RailroadSectionData(info, curve));
+						GmlCurve[] cs = new GmlCurve[param.length - 2];
+						for (int i = 2; i < param.length; i++) {
+							int curveIdx = Integer.parseInt(param[2]);
+							cs[i - 2] = curves.get(curveIdx);
+						}
+						lines.add(new RailroadLine(info, cs));
 					} else {
+						int curveIdx = Integer.parseInt(param[2]);
+						GmlCurve curve = curves.get(curveIdx);
+
 						stations.add(new Station(name, info, curve));
 					}
 				}
-				if (stations.isEmpty() || sections.isEmpty()) {
+				if (stations.isEmpty() || lines.isEmpty()) {
 					throw new IllegalStateException();
 				}
 				ret = new RailwayCollection(stations.toArray(new Station[stations.size()]),
-						sections.toArray(new RailroadSectionData[sections.size()]));
+						lines);
 			} finally {
 				in.close();
 			}
@@ -655,7 +661,8 @@ public class KsjDataManager {
 			if (infos.isEmpty())
 				return ret;
 			
-			ret = this.readRailwayCSV(infos, curves);
+			ret = this.readRailwayCollectionCSV(infos, curves);
+			
 			System.out.printf("RAILWAY: %dms\n", (System.currentTimeMillis() - t0));
 
 		} catch (IOException e) {
@@ -665,7 +672,7 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private boolean writeRailwayStationCSV(RailwayCollection data,
+	private boolean writeRailwayCollectionCSV(RailwayCollection data,
 			Map<RailroadInfo, Integer> infoMap, List<RailroadInfo> infoList,
 			Map<GmlCurve, Integer> curveMap, List<GmlCurve> curveList) throws IOException {
 
@@ -701,7 +708,7 @@ public class KsjDataManager {
 						station.setInfo(info);
 					}
 
-					Integer curveIdx = curveMap.get(info);
+					Integer curveIdx = curveMap.get(curve);
 					if (curveIdx == null) {
 						curveIdx = curveList.size();
 						curveMap.put(curve, curveIdx);
@@ -716,10 +723,10 @@ public class KsjDataManager {
 					out.flush();
 				}
 				
-				for (RailroadSectionData section : data.getRailroadSection()) {
+				for (RailroadLine section : data.getJrLines()) {
 
 					RailroadInfo info = section.getInfo();
-					GmlCurve curve = section.getCurve();
+					GmlCurve[] curves = section.getCurves();
 
 					Integer infoIdx = infoMap.get(info);
 					if (infoIdx == null) {
@@ -731,18 +738,53 @@ public class KsjDataManager {
 						section.setInfo(info);
 					}
 
-					Integer curveIdx = curveMap.get(info);
-					if (curveIdx == null) {
-						curveIdx = curveList.size();
-						curveMap.put(curve, curveIdx);
-						curveList.add(curve);
+					out.write(String.format(",%d", infoIdx));
+					for (int i = 0; i < curves.length; i++) {
+						GmlCurve curve = curves[i];
+						Integer curveIdx = curveMap.get(curve);
+						if (curveIdx == null) {
+							curveIdx = curveList.size();
+							curveMap.put(curve, curveIdx);
+							curveList.add(curve);
+						} else {
+							curve = curveList.get(curveIdx);
+							curves[i] = curve;
+						}
+						out.write(String.format(",%d", curveIdx));
+					}
+					out.newLine();
+					out.flush();
+				}
+
+				for (RailroadLine section : data.getOtherLines()) {
+
+					RailroadInfo info = section.getInfo();
+					GmlCurve[] curves = section.getCurves();
+
+					Integer infoIdx = infoMap.get(info);
+					if (infoIdx == null) {
+						infoIdx = infoList.size();
+						infoMap.put(info, infoIdx);
+						infoList.add(info);
 					} else {
-						curve = curveList.get(curveIdx);
-						section.setCurve(curve);
+						info = infoList.get(infoIdx);
+						section.setInfo(info);
 					}
 
-					out.write(String.format(",%d,%d", infoIdx, curveIdx));
-
+					out.write(String.format(",%d", infoIdx));
+					for (int i = 0; i < curves.length; i++) {
+						GmlCurve curve = curves[i];
+						Integer curveIdx = curveMap.get(curve);
+						if (curveIdx == null) {
+							curveIdx = curveList.size();
+							curveMap.put(curve, curveIdx);
+							curveList.add(curve);
+						} else {
+							curve = curveList.get(curveIdx);
+							curves[i] = curve;
+						}
+						out.write(String.format(",%d", curveIdx));
+					}
 					out.newLine();
 					out.flush();
 				}
@@ -806,7 +848,7 @@ public class KsjDataManager {
 		String path = this.csvDir + File.separatorChar + CSV_RAIL_CURVE;
 		try {
 			// 1. Station
-			writeRailwayStationCSV(data, infoMap, infoList, curveMap, curveList);
+			writeRailwayCollectionCSV(data, infoMap, infoList, curveMap, curveList);
 
 			// 2. Railroad Info
 			writeRailroadInfoCSV(infoList);
@@ -853,7 +895,7 @@ public class KsjDataManager {
 			parser.parse(new GZIPInputStream(new FileInputStream(file)), handler);
 
 			Station[] stations = handler.getStations();
-			RailroadSectionData[] sections = handler.getRailroadSections();
+			RailroadSection[] sections = handler.getRailroadSections();
 
 			ret = new RailwayCollection(stations, sections);
 		} catch (Exception e) {

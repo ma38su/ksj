@@ -17,4 +17,6 @@ public interface RailroadSection {
 	
 	public Rectangle getBounds();
 	
+	public boolean join(RailroadSection section);
+	
 }

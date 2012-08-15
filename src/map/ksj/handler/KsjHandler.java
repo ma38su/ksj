@@ -34,7 +34,7 @@ public class KsjHandler extends DefaultHandler {
 		this.linkTarget.add("gml:curveMember");
 		this.linkTarget.add("ksj:position");
 		this.linkTarget.add("ksj:loc");
-		this.linkTarget.add("ksj:srs");
+		// this.linkTarget.add("ksj:srs"); // ksj:Station -> ksj:RailroadSection
 		this.linkTarget.add("ksj:are");
 		this.linkTarget.add("ksj:brt");
 

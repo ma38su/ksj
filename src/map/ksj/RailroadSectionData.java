@@ -83,4 +83,15 @@ public class RailroadSectionData implements Data, RailroadSection {
 	public Rectangle getBounds() {
 		return this.curve.getBounds();
 	}
+
+	@Override
+	public boolean join(RailroadSection section) {
+		GmlCurve curve = section.getCurve();
+		boolean ret = this.curve.isConnected(curve);
+		if (ret) {
+			this.curve = this.curve.join(curve);
+		}
+		return ret;
+	}
+
 }

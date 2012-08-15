@@ -80,6 +80,7 @@ public class Station implements Data, RailroadSection {
 				this.info.setRailwayType(railwayType);
 			}
 		} else if (obj instanceof RailroadSectionData) {
+			assert(false); // ここはもう通らない
 			RailroadSectionData section = (RailroadSectionData) obj;
 			if (this.curve == null) {
 				this.curve = section.getCurve();
@@ -107,4 +108,13 @@ public class Station implements Data, RailroadSection {
 		return this.curve.getBounds();
 	}
 
+	@Override
+	public boolean join(RailroadSection section) {
+		GmlCurve curve = section.getCurve();
+		boolean ret = this.curve.isConnected(curve);
+		if (ret) {
+			this.curve = this.curve.join(curve);
+		}
+		return ret;
+	}
 }
