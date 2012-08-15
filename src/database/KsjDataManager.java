@@ -624,7 +624,7 @@ public class KsjDataManager {
 					if ("".equals(name)) {
 						GmlCurve[] cs = new GmlCurve[param.length - 2];
 						for (int i = 2; i < param.length; i++) {
-							int curveIdx = Integer.parseInt(param[2]);
+							int curveIdx = Integer.parseInt(param[i]);
 							cs[i - 2] = curves.get(curveIdx);
 						}
 						lines.add(new RailroadLine(info, cs));

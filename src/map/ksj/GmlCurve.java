@@ -19,6 +19,7 @@ import java.util.List;
 public class GmlCurve implements Data, Serializable {
 	
 	public static GmlCurve[] join(List<GmlCurve> curves) {
+//		return curves.toArray(new GmlCurve[curves.size()]);
 		List<GmlCurve> ret = new ArrayList<GmlCurve>();
 		
 		LinkedList<GmlCurve> list = new LinkedList<GmlCurve>(curves);
