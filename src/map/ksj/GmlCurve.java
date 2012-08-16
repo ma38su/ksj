@@ -3,23 +3,18 @@ package map.ksj;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
  * 曲線型
  * @author fujiwara
  */
-public class GmlCurve implements Data, Serializable {
+public class GmlCurve implements Data {
 	
 	public static GmlCurve[] join(List<GmlCurve> curves) {
-//		return curves.toArray(new GmlCurve[curves.size()]);
+		return curves.toArray(new GmlCurve[curves.size()]);
+		/*
 		List<GmlCurve> ret = new ArrayList<GmlCurve>();
 		
 		LinkedList<GmlCurve> list = new LinkedList<GmlCurve>(curves);
@@ -40,13 +35,14 @@ public class GmlCurve implements Data, Serializable {
 			ret.add(curve);
 		}
 		return ret.toArray(new GmlCurve[ret.size()]);
+		*/
 	}
 	
 	private int npoints;
 	private int[] xpoints;
 	private int[] ypoints;
 	
-	private transient Rectangle bounds;
+	private Rectangle bounds;
 	
 	public GmlCurve() {
 	}
@@ -72,14 +68,16 @@ public class GmlCurve implements Data, Serializable {
 	
 	private void initBounds() {
 		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-		int maxX = 0, maxY = 0;
+		int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
 		for (int i = 0; i < this.npoints; i++) {
 			if (minX > this.xpoints[i]) minX = this.xpoints[i];
 			if (maxX < this.xpoints[i]) maxX = this.xpoints[i];
 			if (minY > this.ypoints[i]) minY = this.ypoints[i];
 			if (maxY < this.ypoints[i]) maxY = this.ypoints[i];
 		}
-		this.bounds = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+		int width = maxX == minX ? 1 : maxX - minX;
+		int height = maxY == minY ? 1 : maxY - minY;
+		this.bounds = new Rectangle(minX, minY, width, height);
 	}
 	
 	public int[] getArrayX() {
@@ -226,10 +224,5 @@ public class GmlCurve implements Data, Serializable {
 			ret = new GmlCurve(xary, yary, n);
 		}
 		return ret;
-	}
-	
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-		in.defaultReadObject();
-		initBounds();
 	}
 }

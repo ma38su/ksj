@@ -896,8 +896,9 @@ public class KsjDataManager {
 
 			Station[] stations = handler.getStations();
 			RailroadSection[] sections = handler.getRailroadSections();
-
+			
 			ret = new RailwayCollection(stations, sections);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

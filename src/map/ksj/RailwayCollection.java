@@ -28,8 +28,11 @@ public class RailwayCollection {
 		this.otherLines = others.toArray(new RailroadLine[others.size()]);
 	}
 	
+	public RailroadSection[] sections;
 	public RailwayCollection(Station[] stations, RailroadSection[] sections) {
 		this.stations = stations;
+		
+		this.sections = sections;
 
 		Map<RailroadInfo, List<GmlCurve>> map = new HashMap<RailroadInfo, List<GmlCurve>>();
 		for (RailroadSection section : sections) {

@@ -131,7 +131,7 @@ public class KsjHandler extends DefaultHandler {
 				Data data = (Data) c.newInstance();
 				String key = attributes.getValue("gml:id");
 				if (key != null) {
-					this.dataMap .put(key, data);
+					this.dataMap.put(key, data);
 				}
 				
 				Data parent = this.dataStack.peek();
