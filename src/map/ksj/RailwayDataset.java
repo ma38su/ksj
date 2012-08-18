@@ -5,13 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RailwayCollection {
+public class RailwayDataset {
 
 	private final RailroadLine[] otherLines;
 	private final RailroadLine[] jrLines;
 	private final Station[] stations;
 	
-	public RailwayCollection(Station[] stations, List<RailroadLine> lines) {
+	public RailwayDataset(Station[] stations, List<RailroadLine> lines) {
 		this.stations = stations;
 		List<RailroadLine> others = new ArrayList<RailroadLine>();
 		List<RailroadLine> jrs = new ArrayList<RailroadLine>();
@@ -29,7 +29,7 @@ public class RailwayCollection {
 	}
 	
 	public RailroadSection[] sections;
-	public RailwayCollection(Station[] stations, RailroadSection[] sections) {
+	public RailwayDataset(Station[] stations, RailroadSection[] sections) {
 		this.stations = stations;
 		
 		this.sections = sections;

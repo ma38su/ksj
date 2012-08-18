@@ -7,7 +7,7 @@ import util.FixedPoint;
 
 import map.ksj.GmlCurve;
 import map.ksj.RailroadSection;
-import map.ksj.RailwayCollection;
+import map.ksj.RailwayDataset;
 import map.ksj.Station;
 
 import database.KsjDataManager;
@@ -20,7 +20,7 @@ public class Main {
 				".data"+File.separatorChar+"csv"
 		);
 		
-		RailwayCollection railway = mgr.getRailwayCollection();
+		RailwayDataset railway = mgr.getRailwayDataset();
 		Station[] stations = railway.getStations();
 		railway.getOtherLines();
 

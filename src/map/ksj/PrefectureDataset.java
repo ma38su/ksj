@@ -3,23 +3,23 @@ package map.ksj;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 
-public class PrefectureCollection {
+public class PrefectureDataset {
 	
 	private int code;
 	private Polygon[] polygons;
 	private CityAreas[] areas;
-	private BusCollection bus;
+	private BusDataset bus;
 	
 	private transient Rectangle bounds;
 
-	public PrefectureCollection(int code, Polygon[] polygons) {
+	public PrefectureDataset(int code, Polygon[] polygons) {
 		this.code = code;
 		this.polygons = polygons;
 		
 		this.initPreBounds();
 	}
 	
-	public PrefectureCollection(int code, Polygon[] polygons, CityAreas[] areas, BusCollection bus) {
+	public PrefectureDataset(int code, Polygon[] polygons, CityAreas[] areas, BusDataset bus) {
 		this.code = code;
 		this.polygons = polygons;
 		this.areas = areas;
@@ -53,11 +53,11 @@ public class PrefectureCollection {
 		this.initBounds();
 	}
 	
-	public BusCollection getBusCollection() {
+	public BusDataset getBusDataset() {
 		return this.bus;
 	}
 	
-	public void setBusCollection(BusCollection bus) {
+	public void setBusDataset(BusDataset bus) {
 		this.bus = bus;
 	}
 	

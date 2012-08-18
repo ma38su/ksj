@@ -11,20 +11,20 @@ import java.util.Map;
  * 都道府県の行政区画(面)
  * @author fujiwara
  */
-public class CityAreaCollection {
+public class CityAreaDataset {
 
 	private int code;
 	private Polygon[] polygons;
 	private CityAreas[] areas;
 	
 
-	public CityAreaCollection(int code, Polygon[] polygons, CityAreas[] areas) {
+	public CityAreaDataset(int code, Polygon[] polygons, CityAreas[] areas) {
 		this.code = code;
 		this.polygons = polygons;
 		this.areas = areas;
 	}
 	
-	public CityAreaCollection(int code, CityArea[] areas) {
+	public CityAreaDataset(int code, CityArea[] areas) {
 		this.code = code;
 		Map<CityInfo, List<Polygon>> map = new LinkedHashMap<CityInfo, List<Polygon>>();
 		for (CityArea area : areas) {

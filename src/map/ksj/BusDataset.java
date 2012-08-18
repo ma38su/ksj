@@ -1,12 +1,12 @@
 package map.ksj;
 
-public class BusCollection {
+public class BusDataset {
 
 	private final int code;
 	private final BusStop[] stops;
 	private final BusRoute[] routes;
 	
-	public BusCollection(int code, BusStop[] stops, BusRoute[] routes) {
+	public BusDataset(int code, BusStop[] stops, BusRoute[] routes) {
 		assert(stops != null && routes != null);
 
 		this.code = code;

@@ -41,19 +41,19 @@ import util.FixedPoint;
 import util.GeneralFileFilter;
 
 import map.ksj.CityArea;
-import map.ksj.CityAreaCollection;
+import map.ksj.CityAreaDataset;
 import map.ksj.CityAreas;
 import map.ksj.CityInfo;
-import map.ksj.BusCollection;
+import map.ksj.BusDataset;
 import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.GmlCurve;
-import map.ksj.PrefectureCollection;
+import map.ksj.PrefectureDataset;
 import map.ksj.RailroadInfo;
 import map.ksj.RailroadLine;
 import map.ksj.RailroadSection;
-import map.ksj.RailwayCollection;
+import map.ksj.RailwayDataset;
 import map.ksj.Station;
 import map.ksj.handler.HandlerN02;
 import map.ksj.handler.HandlerN03;
@@ -602,10 +602,10 @@ public class KsjDataManager {
 		return infos;	
 	}
 
-	private RailwayCollection readRailwayCollectionCSV(List<RailroadInfo> infos, List<GmlCurve> curves)
+	private RailwayDataset readRailwayDatasetCSV(List<RailroadInfo> infos, List<GmlCurve> curves)
 			throws IOException {
 
-		RailwayCollection ret = null;
+		RailwayDataset ret = null;
 		List<Station> stations = new ArrayList<Station>();
 		List<RailroadLine> lines = new ArrayList<RailroadLine>();
 		
@@ -638,7 +638,7 @@ public class KsjDataManager {
 				if (stations.isEmpty() || lines.isEmpty()) {
 					throw new IllegalStateException();
 				}
-				ret = new RailwayCollection(stations.toArray(new Station[stations.size()]),
+				ret = new RailwayDataset(stations.toArray(new Station[stations.size()]),
 						lines);
 			} finally {
 				in.close();
@@ -647,8 +647,8 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private RailwayCollection readRailwayCollectionCSV() {
-		RailwayCollection ret = null;
+	private RailwayDataset readRailwayDatasetCSV() {
+		RailwayDataset ret = null;
 		try {
 			long t0 = System.currentTimeMillis();
 
@@ -661,7 +661,7 @@ public class KsjDataManager {
 			if (infos.isEmpty())
 				return ret;
 			
-			ret = this.readRailwayCollectionCSV(infos, curves);
+			ret = this.readRailwayDatasetCSV(infos, curves);
 			
 			System.out.printf("RAILWAY: %dms\n", (System.currentTimeMillis() - t0));
 
@@ -672,7 +672,7 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private boolean writeRailwayCollectionCSV(RailwayCollection data,
+	private boolean writeRailwayDatasetCSV(RailwayDataset data,
 			Map<RailroadInfo, Integer> infoMap, List<RailroadInfo> infoList,
 			Map<GmlCurve, Integer> curveMap, List<GmlCurve> curveList) throws IOException {
 
@@ -836,7 +836,7 @@ public class KsjDataManager {
 		}
 	}
 	
-	public boolean writeRailwayCollectionCSV(RailwayCollection data) {
+	public boolean writeRailwayDatasetCSV(RailwayDataset data) {
 		boolean ret = true;
 
 		List<RailroadInfo> infoList = new ArrayList<RailroadInfo>();
@@ -848,7 +848,7 @@ public class KsjDataManager {
 		String path = this.csvDir + File.separatorChar + CSV_RAIL_CURVE;
 		try {
 			// 1. Station
-			writeRailwayCollectionCSV(data, infoMap, infoList, curveMap, curveList);
+			writeRailwayDatasetCSV(data, infoMap, infoList, curveMap, curveList);
 
 			// 2. Railroad Info
 			writeRailroadInfoCSV(infoList);
@@ -866,16 +866,16 @@ public class KsjDataManager {
 	/**
 	 * @return 鉄道のデータ配列
 	 */
-	public RailwayCollection getRailwayCollection() {
-		RailwayCollection ret = this.readRailwayCollectionCSV();
+	public RailwayDataset getRailwayDataset() {
+		RailwayDataset ret = this.readRailwayDatasetCSV();
 		if (ret == null) {
 			long t0 = System.currentTimeMillis();
 
-			ret = this.readRailwayCollectionGML();
+			ret = this.readRailwayDatasetGML();
 
 			System.out.printf("RAILWAY: %dms\n", (System.currentTimeMillis() - t0));
 
-			this.writeRailwayCollectionCSV(ret);
+			this.writeRailwayDatasetCSV(ret);
 		}
 		return ret;
 	}
@@ -883,10 +883,10 @@ public class KsjDataManager {
 	/**
 	 * @return 行政区画(面)のデータ配列
 	 */
-	private RailwayCollection readRailwayCollectionGML() {
+	private RailwayDataset readRailwayDatasetGML() {
 		long t0 = System.currentTimeMillis();
 		
-		RailwayCollection ret = null;
+		RailwayDataset ret = null;
 		this.getKsjFile(TYPE_RAILWAY);
 		try {
 			SAXParser parser = this.factory.newSAXParser();
@@ -897,7 +897,7 @@ public class KsjDataManager {
 			Station[] stations = handler.getStations();
 			RailroadSection[] sections = handler.getRailroadSections();
 			
-			ret = new RailwayCollection(stations, sections);
+			ret = new RailwayDataset(stations, sections);
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -963,8 +963,8 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private CityAreaCollection readAreaCollectionCSV(int code) {
-		CityAreaCollection ret = null;
+	private CityAreaDataset readAreaDatasetCSV(int code) {
+		CityAreaDataset ret = null;
 
 		try {
 			long t0 = System.currentTimeMillis();
@@ -988,7 +988,7 @@ public class KsjDataManager {
 			if (areasList.isEmpty())
 				return ret;
 
-			ret = new CityAreaCollection(code,
+			ret = new CityAreaDataset(code,
 					prefPolygons.toArray(new Polygon[prefPolygons.size()]),
 					areasList.toArray(new CityAreas[areasList.size()]));
 
@@ -1001,7 +1001,7 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	private void writeAreaCSV(CityAreaCollection data,
+	private void writeAreaCSV(CityAreaDataset data,
 			List<Polygon> polygonList) throws IOException {
 
 		int code = data.getCode();
@@ -1085,7 +1085,7 @@ public class KsjDataManager {
 		}
 	}
 
-	private boolean writeAreaCollectionCSV(CityAreaCollection data) {
+	private boolean writeAreaDatasetCSV(CityAreaDataset data) {
 
 		boolean ret = false;
 		int code = data.getCode();
@@ -1115,23 +1115,23 @@ public class KsjDataManager {
 		return ret;
 	}
 	
-	public PrefectureCollection getPrefectureData(final int code) {
-		PrefectureCollection ret = null;
+	public PrefectureDataset getPrefectureData(final int code) {
+		PrefectureDataset ret = null;
 		File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 				+ String.format(CSV_PREF_POLYGON_FORMAT, code));
 
 		try {
 			List<Polygon> polygons = readPolygonCSV(prefFile);
 			if (!polygons.isEmpty()) {
-				final PrefectureCollection pref = new PrefectureCollection(
+				final PrefectureDataset pref = new PrefectureDataset(
 						code, polygons.toArray(new Polygon[polygons.size()]));
 				Thread thread = new Thread() {
 					@Override
 					public void run() {
-						CityAreaCollection area = getAreaCollection(code);
+						CityAreaDataset area = getAreaDataset(code);
 						pref.setAreas(area.getCityAreas());
-						BusCollection bus = getBusCollection(code);
-						pref.setBusCollection(bus);
+						BusDataset bus = getBusDataset(code);
+						pref.setBusDataset(bus);
 					}
 				};
 				thread.setPriority(Thread.MIN_PRIORITY);
@@ -1142,9 +1142,9 @@ public class KsjDataManager {
 			e.printStackTrace();
 		}
 		if (ret == null) {
-			CityAreaCollection area = getAreaCollection(code);
-			BusCollection bus = getBusCollection(code);
-			ret = new PrefectureCollection(code, area.getPolygons(), area.getCityAreas(), bus);
+			CityAreaDataset area = getAreaDataset(code);
+			BusDataset bus = getBusDataset(code);
+			ret = new PrefectureDataset(code, area.getPolygons(), area.getCityAreas(), bus);
 		}
 		return ret;
 	}
@@ -1153,13 +1153,13 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return 行政区画(面)のデータ配列
 	 */
-	public CityAreaCollection getAreaCollection(int code) {
-		CityAreaCollection ret = this.readAreaCollectionCSV(code);
+	public CityAreaDataset getAreaDataset(int code) {
+		CityAreaDataset ret = this.readAreaDatasetCSV(code);
 		if (ret == null) {
 			long t0 = System.currentTimeMillis();
 			
-			ret = this.readAreaCollectionGML(code);
-			this.writeAreaCollectionCSV(ret);
+			ret = this.readAreaDatasetGML(code);
+			this.writeAreaDatasetCSV(ret);
 			System.out.printf("%s(%02d): %dms\n", ret.getName(), code, (System.currentTimeMillis() - t0));
 		}
 		return ret;
@@ -1168,10 +1168,10 @@ public class KsjDataManager {
 	/**
 	 * @return 行政区画(面)のデータ配列
 	 */
-	public CityAreaCollection[] getAreaCollections() {
+	public CityAreaDataset[] getAreaDataset() {
 		BlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(4);
 		ThreadPoolExecutor exec = new ThreadPoolExecutor(4, 4, 0, TimeUnit.MICROSECONDS, queue);
-		final CityAreaCollection[] ret = new CityAreaCollection[47];
+		final CityAreaDataset[] ret = new CityAreaDataset[47];
 		try {
 			try {
 				int i = 1;
@@ -1181,7 +1181,7 @@ public class KsjDataManager {
 						exec.execute(new Runnable() {
 							@Override
 							public void run() {
-								ret[code - 1] = getAreaCollection(code);
+								ret[code - 1] = getAreaDataset(code);
 							}
 						});
 					} else {
@@ -1202,7 +1202,7 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return 行政区画(面)のデータ配列
 	 */
-	public CityAreaCollection readAreaCollectionGML(int code) {
+	public CityAreaDataset readAreaDatasetGML(int code) {
 		long t0 = System.currentTimeMillis();
 
 		CityArea[] areas = null;
@@ -1224,14 +1224,14 @@ public class KsjDataManager {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		CityAreaCollection ret = new CityAreaCollection(code, areas);
+		CityAreaDataset ret = new CityAreaDataset(code, areas);
 		System.out.printf("N03 %02d: %dms\n", code, (System.currentTimeMillis() - t0));
 
 		return ret;
 	}
 
-	private BusCollection readBusCollectionCSV(int code) {
-		BusCollection ret = null;
+	private BusDataset readBusDatasetCSV(int code) {
+		BusDataset ret = null;
 		try {
 			long t0 = System.currentTimeMillis();
 
@@ -1254,7 +1254,7 @@ public class KsjDataManager {
 			if (stops == null)
 				return ret;
 
-			ret = new BusCollection(code, stops, routes);
+			ret = new BusDataset(code, stops, routes);
 
 			System.out.printf("BUS(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 
@@ -1434,7 +1434,7 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private void writeBusStopCsv(BusCollection data, Map<BusRouteInfo, Integer> infoMap,
+	private void writeBusStopCsv(BusDataset data, Map<BusRouteInfo, Integer> infoMap,
 			List<BusRouteInfo> infoList) throws IOException {
 
 		int code = data.getCode();
@@ -1487,11 +1487,11 @@ public class KsjDataManager {
 		}
 	}
 
-	private void writeBusRouteCsv(BusCollection collection, Map<BusRouteInfo, Integer> infoMap,
+	private void writeBusRouteCsv(BusDataset dataset, Map<BusRouteInfo, Integer> infoMap,
 			List<BusRouteInfo> infoList, Map<GmlCurve, Integer> curveMap, List<GmlCurve> curveList) throws IOException {
 
-		int code = collection.getCode();
-		BusRoute[] routes = collection.getBusRoute();
+		int code = dataset.getCode();
+		BusRoute[] routes = dataset.getBusRoute();
 		String path = this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 				+ String.format(CSV_BUS_ROUTE_FORMAT, code);
 		File file = new File(path);
@@ -1628,11 +1628,11 @@ public class KsjDataManager {
 		}
 	}
 
-	private boolean writeBusCollectionCsv(BusCollection collection) {
+	private boolean writeBusDatasetCsv(BusDataset dataset) {
 		
 		boolean ret = true;
 
-		int code = collection.getCode();
+		int code = dataset.getCode();
 
 		List<BusRouteInfo> infoList = new ArrayList<BusRouteInfo>();
 		Map<BusRouteInfo, Integer> infoMap = new HashMap<BusRouteInfo, Integer>();
@@ -1642,10 +1642,10 @@ public class KsjDataManager {
 
 		try {
 			// 1 Bus Stop
-			writeBusStopCsv(collection, infoMap, infoList);
+			writeBusStopCsv(dataset, infoMap, infoList);
 
 			// 2 Bus Route
-			writeBusRouteCsv(collection, infoMap, infoList, curveMap, curveList);
+			writeBusRouteCsv(dataset, infoMap, infoList, curveMap, curveList);
 
 			// 3 Bus Route Info
 			writeBusRouteInfoCsv(code, infoList);
@@ -1667,10 +1667,10 @@ public class KsjDataManager {
 	/**
 	 * @return バスのデータ(バスルートおよびバス停留所)
 	 */
-	public BusCollection[] getBusCollections() {
+	public BusDataset[] getBusDataset() {
 		BlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(4);
 		ThreadPoolExecutor exec = new ThreadPoolExecutor(4, 4, 0, TimeUnit.MICROSECONDS, queue);
-		final BusCollection[] ret = new BusCollection[47];
+		final BusDataset[] ret = new BusDataset[47];
 		try {
 			try {
 				int i = 1;
@@ -1680,7 +1680,7 @@ public class KsjDataManager {
 						exec.execute(new Runnable() {
 							@Override
 							public void run() {
-								ret[code - 1] = getBusCollection(code);
+								ret[code - 1] = getBusDataset(code);
 							}
 						});
 					} else {
@@ -1701,8 +1701,8 @@ public class KsjDataManager {
 	 * @param code 都道府県コード
 	 * @return バスのデータ(バスルートおよびバス停留所)
 	 */
-	public BusCollection getBusCollection(int code) {
-		BusCollection ret = this.readBusCollectionCSV(code);
+	public BusDataset getBusDataset(int code) {
+		BusDataset ret = this.readBusDatasetCSV(code);
 		if (ret == null) {
 			long t0 = System.currentTimeMillis();
 
@@ -1711,8 +1711,8 @@ public class KsjDataManager {
 
 			System.out.printf("BUS(%02d): %dms\n", code, (System.currentTimeMillis() - t0));
 
-			ret = new BusCollection(code, stops, routes);
-			this.writeBusCollectionCsv(ret);
+			ret = new BusDataset(code, stops, routes);
+			this.writeBusDatasetCsv(ret);
 		}
 		return ret;
 	}
