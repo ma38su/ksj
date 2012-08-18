@@ -5,12 +5,12 @@ import java.io.File;
 
 import util.FixedPoint;
 
+import map.KsjDataManager;
 import map.ksj.GmlCurve;
 import map.ksj.RailroadSection;
 import map.ksj.RailwayDataset;
 import map.ksj.Station;
 
-import database.KsjDataManager;
 
 public class Main {
 	public static void main(String[] args) {

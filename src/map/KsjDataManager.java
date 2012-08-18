@@ -1,4 +1,4 @@
-package database;
+package map;
 
 import java.awt.Point;
 import java.awt.Polygon;
