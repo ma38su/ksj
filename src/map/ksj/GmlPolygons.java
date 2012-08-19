@@ -35,6 +35,7 @@ public class GmlPolygons implements Data {
 		int[] tmpY = new int[maxN];
 		int reduceCount = 0;
 		int reduceIsland = 0;
+		int total = 0;
 		for (Polygon p : polygons) {
 			tmpX[0] = p.xpoints[0] / reductionScale;
 			tmpY[0] = p.ypoints[0] / reductionScale;
@@ -42,7 +43,7 @@ public class GmlPolygons implements Data {
 			for (int i = 1; i < p.npoints; i++) {
 				int nx = p.xpoints[i] / reductionScale;
 				int ny = p.ypoints[i] / reductionScale;
-				if (nx != tmpX[i] || ny != tmpY[i]) {
+				if (nx != tmpX[newN] || ny != tmpY[newN]) {
 					newN++;
 					tmpX[newN] = nx;
 					tmpY[newN] = ny;
@@ -54,45 +55,35 @@ public class GmlPolygons implements Data {
 				// 三角形以上
 				int[] newX = new int[newN];
 				int[] newY = new int[newN];
-				for (int i = 1; i < newN; i++) {
-					newX[i] = tmpX[i];
-					newY[i] = tmpY[i];
+				for (int i = 0; i < newN; i++) {
+					newX[i] = tmpX[i] * reductionScale + reductionScale / 2;
+					newY[i] = tmpY[i] * reductionScale + reductionScale / 2;
 				}
 				ret.add(new Polygon(newX, newY, newN));
 			} else {
 				reduceIsland++;
 			}
+			total += p.npoints;
 		}
 		
 		System.out.println("reduceIsland: "+ reduceIsland);
-		System.out.println("reduceCount:  "+ reduceCount);
+		System.out.println("reduceCount:  "+ reduceCount + " / "+ total);
 		return ret;
 	}
 	
-	public static List<Polygon> getOptBK(List<Polygon> polygons) {
-		Area area = new Area();
-		for (int i = 0; i < polygons.size(); i++) {
-			System.out.printf("area add: %d / %d\n", i, polygons.size());
-			Polygon polygon = polygons.get(i);
-			area.add(new Area(polygon));
-		}
-		return toPolygonList(area);
-	}
-
 	public static List<Polygon> getOpt(List<Polygon> polygons) {
 		LinkedList<Area> areaList = new LinkedList<Area>();
 		for (Polygon p : polygons) {
 			areaList.add(new Area(p));
 		}
 		while (areaList.size() > 1) {
-			//System.out.printf("area add: %d / %d\n", areaList.size(), polygons.size());
+			System.out.printf("polygon opt: %d / %d\n", areaList.size(), polygons.size());
 			Area area = areaList.poll();
 			area.add(areaList.poll());
 			areaList.add(area);
 		}
 		return toPolygonList(areaList.poll());
 	}
-
 	
 	/**
 	 * AreaをList<Polygon>に変換します。

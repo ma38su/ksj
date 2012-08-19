@@ -18,8 +18,6 @@ public class RailwayDataset {
 		for (RailroadLine line : lines) {
 			if (line.getInfo().getRailwayType() == RailroadInfo.RAIL_JR) {
 				jrs.add(line);
-				System.out.println(line.getCurves().length);
-				System.out.println(line.getInfo());
 			} else {
 				others.add(line);
 			}

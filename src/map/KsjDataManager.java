@@ -49,6 +49,7 @@ import map.ksj.BusRoute;
 import map.ksj.BusRouteInfo;
 import map.ksj.BusStop;
 import map.ksj.GmlCurve;
+import map.ksj.GmlPolygons;
 import map.ksj.PrefectureDataset;
 import map.ksj.RailroadInfo;
 import map.ksj.RailroadLine;
@@ -910,31 +911,39 @@ public class KsjDataManager {
 		return ret;
 	}
 
-	private List<Polygon> readPolygonCSV(File file) throws IOException {
-		List<Polygon> ret = new ArrayList<Polygon>();
+	private Polygon[] readPolygonCSV(File file) {
+		Polygon[] ret = null;
 		if (file.isFile()) {
-			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
 			try {
-				String line;
-				while ((line = in.readLine()) != null) {
-					String[] param = line.split(",");
-					int n = Integer.parseInt(param[0]);
-					int[] x = new int[n];
-					int[] y = new int[n];
-					for (int i = 0; i < n; i++) {
-						y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
-						x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
+				BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), CHARSET));
+				try {
+					String line = in.readLine();
+					int size = Integer.parseInt(line);
+					ret = new Polygon[size];
+					int idx = 0;
+					while ((line = in.readLine()) != null) {
+						String[] param = line.split(",");
+						int n = Integer.parseInt(param[0]);
+						int[] x = new int[n];
+						int[] y = new int[n];
+						for (int i = 0; i < n; i++) {
+							y[i] = FixedPoint.parseFixedPoint(param[i * 2 + 1]);
+							x[i] = FixedPoint.parseFixedPoint(param[i * 2 + 2]);
+						}
+						ret[idx++] = new Polygon(x, y, n);
 					}
-					ret.add(new Polygon(x, y, n));
+				} finally {
+					in.close();
 				}
-			} finally {
-				in.close();
+			} catch (IOException e) {
+				ret = null;
+				e.printStackTrace();
 			}
 		}
 		return ret;
 	}
 	
-	private List<CityAreas> readAreasCSV(int code, List<Polygon> polygons) throws IOException {
+	private List<CityAreas> readAreasCSV(int code, Polygon[] polygons) throws IOException {
 
 		List<CityAreas> ret = new ArrayList<CityAreas>();
 		File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
@@ -955,7 +964,7 @@ public class KsjDataManager {
 					Polygon[] ps = new Polygon[param.length - 5];
 					for (int i = 5; i < param.length; i++) {
 						int idx = Integer.parseInt(param[i]);
-						ps[i - 5] = polygons.get(idx);
+						ps[i - 5] = polygons[idx];
 					}
 					ret.add(new CityAreas(info, ps));
 				}
@@ -975,25 +984,24 @@ public class KsjDataManager {
 			File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 					+ String.format(CSV_PREF_POLYGON_FORMAT, code));
 
-			List<Polygon> prefPolygons = readPolygonCSV(prefFile);
-			if (prefPolygons.isEmpty()) {
+			Polygon[] prefPolygons = readPolygonCSV(prefFile);
+			if (prefPolygons == null) {
 				return ret;
 			}
 
 			File file = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
 					+ String.format(CSV_AREA_POLYGON_FORMAT, code));
 
-			List<Polygon> polygons = readPolygonCSV(file);
-			if (polygons.isEmpty())
+			Polygon[] polygons = readPolygonCSV(file);
+			if (polygons == null) {
 				return ret;
+			}
 			
 			List<CityAreas> areasList = readAreasCSV(code, polygons);
 			if (areasList.isEmpty())
 				return ret;
 
-			ret = new CityAreaDataset(code,
-					prefPolygons.toArray(new Polygon[prefPolygons.size()]),
-					areasList.toArray(new CityAreas[areasList.size()]));
+			ret = new CityAreaDataset(code, prefPolygons, areasList.toArray(new CityAreas[areasList.size()]));
 
 			System.out.printf("%s(%02d): %dms\n", ret.getName(), code, (System.currentTimeMillis() - t0));
 
@@ -1065,6 +1073,8 @@ public class KsjDataManager {
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
 					tmpFile), CHARSET));
 			try {
+				out.write(Integer.toString(polygonList.size()));
+				out.newLine();
 				for (Polygon polygon : polygonList) {
 					out.write(String.format("%d", polygon.npoints));
 					for (int i = 0; i < polygon.npoints; i++) {
@@ -1120,35 +1130,9 @@ public class KsjDataManager {
 	
 	public PrefectureDataset getPrefectureData(final int code) {
 		PrefectureDataset ret = null;
-		File prefFile = new File(this.csvDir + File.separatorChar + String.format("%02d", code) + File.separatorChar
-				+ String.format(CSV_PREF_POLYGON_FORMAT, code));
-
-		try {
-			List<Polygon> polygons = readPolygonCSV(prefFile);
-			if (!polygons.isEmpty()) {
-				final PrefectureDataset pref = new PrefectureDataset(
-						code, polygons.toArray(new Polygon[polygons.size()]));
-				Thread thread = new Thread() {
-					@Override
-					public void run() {
-						CityAreaDataset area = getAreaDataset(code);
-						pref.setAreas(area.getCityAreas());
-						BusDataset bus = getBusDataset(code);
-						pref.setBusDataset(bus);
-					}
-				};
-				thread.setPriority(Thread.MIN_PRIORITY);
-				thread.start();
-				ret = pref;
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		if (ret == null) {
-			CityAreaDataset area = getAreaDataset(code);
-			BusDataset bus = getBusDataset(code);
-			ret = new PrefectureDataset(code, area.getPolygons(), area.getCityAreas(), bus);
-		}
+		CityAreaDataset area = getAreaDataset(code);
+		BusDataset bus = getBusDataset(code);
+		ret = new PrefectureDataset(code, area.getPolygons(), area.getCityAreas(), bus);
 		return ret;
 	}
 	
@@ -1168,6 +1152,28 @@ public class KsjDataManager {
 		return ret;
 	}
 
+	public Polygon[] getJapanPolygon() {
+		Polygon[] ret = null;
+		try {
+			String jpnPath = this.csvDir + File.separatorChar + "all" + File.separatorChar + "japan_polygon.csv";
+			File jpnFile = new File(jpnPath);
+			ret = readPolygonCSV(jpnFile);
+			if (ret == null) {
+				List<Polygon> list = new ArrayList<Polygon>();
+				for (CityAreaDataset dataset : getAreaDataset()) {
+					list.addAll(Arrays.asList(dataset.getPolygons()));
+				}
+				List<Polygon> jpnPolygons = GmlPolygons.getOpt(GmlPolygons.getReduction(8192, list));
+				writePolygonCSV(jpnPath, jpnPolygons);
+				ret = jpnPolygons.toArray(new Polygon[jpnPolygons.size()]);
+			}
+		} catch (IOException e) {
+			ret = null;
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
 	/**
 	 * @return 行政区画(面)のデータ配列
 	 */

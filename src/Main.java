@@ -12,9 +12,9 @@ public class Main {
 		);
 		
 		System.out.println(dir);
-		
+//		mgr.getJapanPolygon();
+		mgr.getAreaDataset();
 		mgr.getRailwayDataset();
 		mgr.getBusDataset();
-		mgr.getAreaDataset();
 	}
 }
