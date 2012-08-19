@@ -5,13 +5,15 @@ import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.util.Arrays;
 
+import map.Label;
+
 /**
  * 行政区画(面)
  * 
  * @author fujiwara
  *
  */
-public class CityAreas {
+public class CityAreas implements Label {
 
 	private Polygon[] polygons;
 	private CityInfo info;
@@ -24,6 +26,10 @@ public class CityAreas {
 		this.info = info;
 		this.polygons = polygons;
 		initBounds();
+	}
+	
+	public String getName() {
+		return this.info.getCn2();
 	}
 	
 	public int getX() {

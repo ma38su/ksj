@@ -363,6 +363,9 @@ public class KsjDataManager {
 		this.orgDir = orgDir;
 		this.csvDir = csvDir;
 		this.factory = SAXParserFactory.newInstance();
+
+		System.out.println("org: "+ new File(this.orgDir).getPath());
+		System.out.println("csv: "+ new File(this.csvDir).getPath());
 	}
 	
 	/**

@@ -3,11 +3,13 @@ package map.ksj;
 import java.util.ArrayList;
 import java.util.List;
 
+import map.Label;
+
 /**
  * バス停留所のクラス
  * @author fujiwara
  */
-public class BusStop implements Data {
+public class BusStop implements Label, Data {
 
 	/**
 	 * バス路線情報

@@ -3,7 +3,9 @@ package map.ksj;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
-public class Station implements Data, RailroadSection {
+import map.Label;
+
+public class Station implements Label, Data, RailroadSection {
 
 	/**
 	 * 駅名
