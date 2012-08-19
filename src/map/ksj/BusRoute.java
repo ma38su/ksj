@@ -1,6 +1,7 @@
 package map.ksj;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 
 /**
  * バスルートのクラス
@@ -8,15 +9,6 @@ import java.awt.Graphics2D;
  */
 public class BusRoute implements Data {
 
-	public BusRoute() {
-		this.info = new BusRouteInfo();
-	}
-	
-	public BusRoute(GmlCurve curve, BusRouteInfo info) {
-		this.curve = curve;
-		this.info = info;
-	}
-	
 	/**
 	 * 路線
 	 */
@@ -48,6 +40,19 @@ public class BusRoute implements Data {
 	 */
 	private String line;
 	
+	public BusRoute() {
+		this.info = new BusRouteInfo();
+	}
+	
+	public BusRoute(GmlCurve curve, BusRouteInfo info) {
+		this.curve = curve;
+		this.info = info;
+	}
+	
+	public Rectangle getBounds() {
+		return this.curve.getBounds();
+	}
+
 	/**
 	 * @return バス路線情報のクラス
 	 */
